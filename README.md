@@ -63,7 +63,7 @@ The app under `examples/android-app` has OpenGL and Vulkan product flavors and u
 
 ## Build and run iOS with Bazel
 
-The iOS sample consumes the matching local MapLibre Native checkout through a Bazel `local_path_override`. From this repository:
+The iOS sample consumes the published `0.0.2` plugin XCFramework by checksum and the matching local MapLibre Native checkout through a Bazel `local_path_override`. From this repository:
 
 ```shell
 bazel build --@maplibre//:renderer=metal \

@@ -13,7 +13,7 @@ objc_library(
         "UIKit",
     ],
     deps = [
-        "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
+        "@fill_extrusion_shadows_release//:FillExtrusionShadows",
         "@maplibre//platform:ios-sdk",
     ],
 )
