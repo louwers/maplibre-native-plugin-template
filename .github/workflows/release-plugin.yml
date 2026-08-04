@@ -54,7 +54,8 @@ jobs:
         run: |
           mkdir -p release-assets
           cp "plugins/$PLUGIN/build/outputs/aar/$PLUGIN-release.aar" "release-assets/$PLUGIN-$VERSION.aar"
-          sha256sum "release-assets/$PLUGIN-$VERSION.aar" > "release-assets/$PLUGIN-$VERSION.aar.sha256"
+          cd release-assets
+          sha256sum "$PLUGIN-$VERSION.aar" > "$PLUGIN-$VERSION.aar.sha256"
 
       - name: Create GitHub release and upload Android artifact
         env:
