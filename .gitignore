@@ -3,6 +3,6 @@
 **/.cxx/
 **/build/
 local.properties
-reposilite.properties
 dependency-resolution/
-
+.DS_Store
+bazel-*

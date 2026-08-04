@@ -1,0 +1,8 @@
+jdk:
+  - openjdk17
+
+before_install:
+  - yes | sdkmanager "ndk;28.2.13676358" "cmake;3.22.1"
+
+install:
+  - ./gradlew :plugins:fill-extrusion-shadows:publishReleasePublicationToMavenLocal -PpluginVersion=$VERSION -PpluginGroup=$GROUP

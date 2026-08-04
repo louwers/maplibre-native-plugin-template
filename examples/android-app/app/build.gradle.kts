@@ -3,7 +3,6 @@ plugins {
 }
 
 val maplibreVersion = providers.gradleProperty("maplibreVersion")
-val pluginVersion = providers.gradleProperty("pluginVersion")
 
 android {
     namespace = "org.maplibre.plugins.shadows.demo"
@@ -33,7 +32,7 @@ android {
 dependencies {
     "openglImplementation"("org.maplibre.gl:android-sdk-opengl:${maplibreVersion.get()}")
     "vulkanImplementation"("org.maplibre.gl:android-sdk-vulkan:${maplibreVersion.get()}")
-    implementation("org.maplibre.plugins:fill-extrusion-shadows:${pluginVersion.get()}")
+    implementation(project(":plugins:fill-extrusion-shadows"))
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:rules:1.7.0")

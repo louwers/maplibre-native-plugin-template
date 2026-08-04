@@ -1,6 +1,6 @@
 # MapLibre Native existing-layer plugin interface
 
-Status: Android v1 implementation. The ABI is platform-neutral; the iOS package and Metal adapter are deferred.
+Status: Android OpenGL/Vulkan and iOS Metal v1 implementations.
 
 ## Design goal
 
@@ -10,7 +10,7 @@ Adding another plugin requires publishing a new plugin library. A core change is
 
 ## Boundary
 
-The public boundary is the pure-C header `mbgl/plugin/plugin_api.h`. Android publishes it in the STL-free `org.maplibre.gl:android-plugin-api` Prefab package; the renderer AARs continue to export the four C symbols from `libmaplibre.so`. An Android plugin receives the registration function address from `MapLibrePluginRegistry` and invokes that typed C function pointer from JNI. It never links to MapLibre C++ classes, STL types, generated style-layer code, or renderer vtables.
+The public boundary is the pure-C header `mbgl/plugin/plugin_api.h`. The plugin keeps a matching copy of that versioned header so it can compile independently, while each Android renderer AAR exports the registration symbols from `libmaplibre.so`. The Android wrapper locates `MapLibrePluginRegistry` reflectively, obtains the registration function address, and invokes that typed C function pointer from JNI; this avoids a transitive renderer or companion-API dependency in the plugin POM. On iOS, `MLNPluginAPI.h` exposes the same types and registration symbol through the MapLibre framework. Neither platform boundary exposes MapLibre C++ classes, STL types, generated style-layer code, or renderer vtables.
 
 Core owns:
 
@@ -59,11 +59,11 @@ After drawable upload and before the main render pass, core calls `prepare_frame
 
 Fill-extrusion packets expose the already-uploaded index and semantic vertex buffers, tile matrix, evaluated constant values, interpolation factors, extrusion height conversion factor, and layer opacity. OpenGL exposes the ordinary triangle mesh. Vulkan exposes roof triangles and instanced walls separately. Plugins must use packet-declared offsets, strides, and attribute types and must not mutate buffer contents.
 
-OpenGL callbacks may use GLES calls directly. Vulkan callbacks record only into the supplied command buffer/render-pass context and resolve Vulkan procedures through the host function. After either callback, the host invalidates cached graphics state and rebinds MapLibre's global uniform descriptors when a render pass is active; this is required because a plugin's Vulkan pipeline layout can invalidate descriptor sets bound by the host. No Vulkan C++ types cross the ABI.
+OpenGL callbacks may use GLES calls directly. Vulkan callbacks record only into the supplied command buffer/render-pass context and resolve Vulkan procedures through the host function. Metal callbacks receive borrowed Objective-C objects as opaque C pointers: device, queue, command buffer, and active render encoder, plus attachment formats and sample count. After a callback, the host invalidates backend state and rebinds its global resources; the Metal render pass explicitly resets its cached pipeline, buffer, depth/stencil, cull, and scissor state. No Vulkan C++ or Metal C++ types cross the ABI.
 
 ## Android packaging
 
-MapLibre's canonical, OpenGL, and Vulkan AARs export the registration symbols and depend on `org.maplibre.gl:android-plugin-api` at the same version. The API AAR contains the Java registry contract and an STL-free Prefab module with the C header. A plugin uses the exact API snapshot as `compileOnly`; a separate non-native Gradle configuration transforms only the exact renderer AAR's `classes.jar` for typed Java helpers. Neither dependency appears in the plugin POM. The application chooses one renderer:
+MapLibre's canonical, OpenGL, and Vulkan AARs export the registration symbols and provide `MapLibrePluginRegistry`. The plugin vendors the ABI v1 C header and compiles its typed Java property helper against MapLibre's public Java API with `compileOnly`. Its wrapper discovers the registry reflectively, so neither MapLibre nor a companion API artifact appears in the plugin POM. The application chooses one renderer:
 
 ```kotlin
 openglImplementation("org.maplibre.gl:android-sdk-opengl:<exact-version>")
@@ -71,7 +71,7 @@ vulkanImplementation("org.maplibre.gl:android-sdk-vulkan:<exact-version>")
 implementation("org.maplibre.plugins:fill-extrusion-shadows:<exact-version>")
 ```
 
-MapLibre uses `c++_static` and keeps its C++ runtime private. Plugins may independently use C++, STL, exceptions, and their own `c++_static` runtime. They must not pass C++/STL objects, exceptions, RTTI identities, or C++ allocation ownership across the ABI; an allocation is destroyed by the DSO that created it. The C API artifact itself is compiled with `ANDROID_STL=none`.
+MapLibre uses `c++_static` and keeps its C++ runtime private. Plugins may independently use C++, STL, exceptions, and their own `c++_static` runtime. They must not pass C++/STL objects, exceptions, RTTI identities, or C++ allocation ownership across the ABI; an allocation is destroyed by the DSO that created it. Any separately published C API artifact is compiled with `ANDROID_STL=none`.
 
 The plugin wrapper first calls `MapLibrePluginRegistry.ensureMapLibreLoaded()`, then loads its own native library, obtains the process-lifetime v1 registration function address from the registry, and invokes it through JNI. This avoids a native link between two independently static-linked C++ DSOs. The registry inspection API reports process-wide IDs and status without depending on any plugin artifact.
 
@@ -82,15 +82,17 @@ The plugin registers:
 - ID `org.maplibre.fill-extrusion-shadows`;
 - target layer `fill-extrusion`;
 - boolean paint property `fill-extrusion-shadow`, default `false`;
-- OpenGL and Vulkan rendering callbacks.
+- OpenGL, Vulkan, and Metal rendering callbacks.
 
-When the property is enabled, the plugin projects upper extrusion vertices toward fixed v1 offset `[-0.5, 0.5]` with height scale `0.38`. It renders black with alpha `0.35 * fill-extrusion-opacity`, then leaves the original building layer untouched to render on top. OpenGL uses stencil and Vulkan uses a `MAX` blend into the single-channel mask; both produce a union mask so overlapping projected geometry cannot darken twice. All constants and shader code reside in this repository.
+When the property is enabled, the plugin projects upper extrusion vertices toward fixed v1 offset `[-0.5, 0.5]` with height scale `0.38`. It renders black with alpha `0.35 * fill-extrusion-opacity`, then leaves the original building layer untouched to render on top. Every backend first rasterizes coverage into a cleared, single-channel union mask and composites that mask exactly once. OpenGL uses stencil, while Vulkan and Metal use `MAX` blending; repeated coverage from overlapping triangles therefore remains `1.0` instead of accumulating opacity. Metal consumes its separately exposed roof packet and decodes constant, scalar, or float2-interpolated heights. All constants and shader code reside in this repository.
 
 Future properties (`-x`, `-y`, `-h-scale`, `-intensity`, and `-blur`) become additional descriptor entries and plugin snapshot reads. They do not require generated core layer properties or a new ABI.
 
-## iOS and Metal roadmap
+## iOS and Metal
 
-The C descriptor and registry are already portable. A later iOS package will load a plugin framework, call the same registration function, and provide Swift/Objective-C result wrappers. A Metal backend adapter will populate an equivalent short-lived backend context and draw packets. The removed experimental `MLNPluginLayer` API is not part of this design and will not be kept as a parallel ABI.
+The static `FillExtrusionShadows` framework provides an Objective-C registration wrapper and calls the same C descriptor code as Android. The plugin is registered before a dependent `MLNStyle` is parsed. MapLibre passes the active Metal command buffer, encoder, and existing fill-extrusion buffers only for the callback duration. The prepare callback builds the union mask in a private `R8Unorm` render target; the before-layer callback samples it in one full-screen composite. The plugin retains only its own pipelines, mask texture, and depth/stencil state. The removed experimental `MLNPluginLayer` API is not part of this design and is not kept as a parallel ABI.
+
+The Bazel sample uses a local MapLibre module override so it compiles against the exact host ABI implementation. Swift Package Manager distribution is layered on the same framework target; it does not introduce another plugin interface.
 
 ## Versioning rules
 

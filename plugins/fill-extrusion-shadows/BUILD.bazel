@@ -1,0 +1,60 @@
+load("@rules_apple//apple:apple.bzl", "apple_static_xcframework")
+load("@rules_apple//apple:versioning.bzl", "apple_bundle_version")
+load("@rules_cc//cc:defs.bzl", "objc_library")
+
+objc_library(
+    name = "FillExtrusionShadows",
+    srcs = [
+        "ios/src/FillExtrusionShadows.mm",
+        "ios/src/shadow_metal.mm",
+        "shared/cpp/shadow_plugin.cpp",
+    ],
+    hdrs = [
+        "ios/include/FillExtrusionShadows/FillExtrusionShadows.h",
+        "shared/include/shadow_renderer.hpp",
+    ],
+    copts = [
+        "-std=c++20",
+        "-fobjc-arc",
+        "-fvisibility=hidden",
+    ],
+    defines = [
+        "MLN_SHADOW_IOS=1",
+        "MLN_SHADOW_PLUGIN_VERSION=\\\"0.0.1-dev\\\"",
+    ],
+    includes = [
+        "ios/include",
+        "shared/include",
+    ],
+    module_name = "FillExtrusionShadows",
+    sdk_frameworks = [
+        "Foundation",
+        "Metal",
+    ],
+    visibility = ["//visibility:public"],
+    deps = ["@maplibre//:plugin-api"],
+)
+
+apple_bundle_version(
+    name = "FillExtrusionShadows.version",
+    build_version = "1",
+    short_version_string = "0.0.1",
+)
+
+apple_static_xcframework(
+    name = "FillExtrusionShadows.xcframework",
+    bundle_id = "org.maplibre.plugins.fill-extrusion-shadows",
+    bundle_name = "FillExtrusionShadows",
+    ios = {
+        "simulator": [
+            "arm64",
+            "x86_64",
+        ],
+        "device": ["arm64"],
+    },
+    minimum_os_versions = {"ios": "14.0"},
+    public_hdrs = ["ios/include/FillExtrusionShadows/FillExtrusionShadows.h"],
+    version = ":FillExtrusionShadows.version",
+    visibility = ["//visibility:public"],
+    deps = [":FillExtrusionShadows"],
+)

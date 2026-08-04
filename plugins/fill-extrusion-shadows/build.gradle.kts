@@ -5,8 +5,9 @@ plugins {
     id("maven-publish")
 }
 
-val maplibreVersion = providers.gradleProperty("maplibreVersion")
+val maplibreJavaApiVersion = providers.gradleProperty("maplibreJavaApiVersion").orElse("13.3.0")
 val pluginVersion = providers.gradleProperty("pluginVersion")
+val pluginGroup = providers.gradleProperty("pluginGroup").orElse("org.maplibre.plugins")
 val pluginAbis = providers.gradleProperty("maplibrePluginAbis").orNull
 
 val maplibreJavaApi by configurations.creating {
@@ -19,7 +20,7 @@ val maplibreJavaClasses = maplibreJavaApi.incoming.artifactView {
     attributes.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "android-classes-jar")
 }.files
 
-group = "org.maplibre.plugins"
+group = pluginGroup.get()
 version = pluginVersion.get()
 
 android {
@@ -47,8 +48,15 @@ android {
 
     externalNativeBuild {
         cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
+            path = file("android/src/main/cpp/CMakeLists.txt")
             version = "3.22.1"
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            manifest.srcFile("android/src/main/AndroidManifest.xml")
+            java.setSrcDirs(listOf("android/src/main/java"))
         }
     }
 
@@ -71,12 +79,13 @@ val generateVulkanShaders by tasks.registering(Exec::class) {
     val sdkRoot = providers.environmentVariable("ANDROID_HOME")
         .orElse(providers.environmentVariable("ANDROID_SDK_ROOT"))
     val ndkRoot = file("${sdkRoot.get()}/ndk/${android.ndkVersion}")
-    commandLine(file("src/main/cpp/shaders/generate_shaders.sh"), ndkRoot)
+    commandLine(file("android/src/main/cpp/shaders/generate_shaders.sh"), ndkRoot)
 }
 
 dependencies {
-    compileOnly("org.maplibre.gl:android-plugin-api:${maplibreVersion.get()}")
-    maplibreJavaApi("org.maplibre.gl:android-sdk:${maplibreVersion.get()}@aar")
+    // Only the stable Java property type is needed at compile time. The C ABI
+    // header is vendored, and registration is discovered reflectively at runtime.
+    maplibreJavaApi("org.maplibre.gl:android-sdk:${maplibreJavaApiVersion.get()}@aar")
     compileOnly(files(maplibreJavaClasses))
     compileOnly("androidx.annotation:annotation:1.8.2")
     testImplementation("junit:junit:4.13.2")
@@ -97,29 +106,6 @@ publishing {
                     license {
                         name.set("BSD-2-Clause")
                         url.set("https://opensource.org/license/bsd-2-clause")
-                    }
-                }
-            }
-        }
-    }
-    repositories {
-        val target = providers.gradleProperty("maplibrePluginRepository")
-            .orElse(providers.environmentVariable("REPOSILITE_URL"))
-        if (target.isPresent) {
-            val repositoryUri = uri(target.get())
-            val repositoryUsername = providers.gradleProperty("reposiliteUsername")
-                .orElse(providers.environmentVariable("REPOSILITE_USERNAME"))
-            val repositoryPassword = providers.gradleProperty("reposilitePassword")
-                .orElse(providers.environmentVariable("REPOSILITE_PASSWORD"))
-            maven {
-                name = "reposilite"
-                url = repositoryUri
-                if (repositoryUri.scheme in setOf("http", "https") &&
-                    repositoryUsername.isPresent && repositoryPassword.isPresent
-                ) {
-                    credentials {
-                        username = repositoryUsername.get()
-                        password = repositoryPassword.get()
                     }
                 }
             }

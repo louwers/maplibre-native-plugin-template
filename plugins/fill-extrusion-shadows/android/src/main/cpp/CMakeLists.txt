@@ -5,21 +5,21 @@ if(NOT DEFINED MLN_SHADOW_PLUGIN_VERSION)
     set(MLN_SHADOW_PLUGIN_VERSION "0.1.0-local")
 endif()
 
-find_package(android-plugin-api REQUIRED CONFIG)
-
 add_library(fill-extrusion-shadows SHARED
+    ../../../../shared/cpp/shadow_plugin.cpp
     fill_extrusion_shadows.cpp
     shadow_opengl.cpp
     shadow_vulkan.cpp
 )
 
 target_compile_features(fill-extrusion-shadows PRIVATE cxx_std_20)
+target_include_directories(fill-extrusion-shadows PRIVATE ../../../../shared/include)
 target_compile_definitions(fill-extrusion-shadows PRIVATE
     VK_NO_PROTOTYPES
+    MLN_SHADOW_ANDROID=1
     MLN_SHADOW_PLUGIN_VERSION="${MLN_SHADOW_PLUGIN_VERSION}"
 )
 target_link_libraries(fill-extrusion-shadows PRIVATE
-    android-plugin-api::plugin_api
     android
     log
     GLESv3

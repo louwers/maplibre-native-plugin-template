@@ -1,4 +1,4 @@
-Source: remotely resolved Vulkan demo running on Pixel_10_Pro (arm64)
+Source: Vulkan demo running on Pixel_10_Pro (arm64)
 Images: screenshots/vulkan-shadow-enabled.png and screenshots/vulkan-shadow-disabled.png
 Compared region: 1280x2388+0+156 (map viewport, excluding status bar and toggle)
 ImageMagick fuzz: 3%

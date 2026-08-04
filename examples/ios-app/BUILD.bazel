@@ -1,0 +1,30 @@
+load("@rules_apple//apple:ios.bzl", "ios_application")
+load("@rules_cc//cc:defs.bzl", "objc_library")
+
+objc_library(
+    name = "app_sources",
+    srcs = [
+        "AppDelegate.h",
+        "AppDelegate.m",
+        "main.m",
+    ],
+    sdk_frameworks = [
+        "CoreLocation",
+        "UIKit",
+    ],
+    deps = [
+        "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
+        "@maplibre//platform:ios-sdk",
+    ],
+)
+
+ios_application(
+    name = "FillExtrusionShadowsDemo",
+    bundle_id = "org.maplibre.plugins.fill-extrusion-shadows.demo",
+    families = ["iphone"],
+    infoplists = ["Info.plist"],
+    minimum_os_version = "14.0",
+    resources = ["//:liberty_shadow_style"],
+    visibility = ["//visibility:public"],
+    deps = [":app_sources"],
+)
