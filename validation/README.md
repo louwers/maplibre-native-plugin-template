@@ -7,8 +7,8 @@ is the untracked Gradle properties file that supplies repository credentials.
 The log is filtered to dependency-download and build-result lines so it can be
 checked in without local credentials or unrelated Gradle noise.
 
-`published-artifacts.sha256` records files fetched back from Reposilite and
-matched against the server-provided checksum resources.
+`published-artifacts.sha256` records the POM and AAR files fetched back from
+Reposilite through that clean Gradle dependency cache.
 
 `vulkan-screenshot-diff.txt` records the enabled/disabled pixel comparison for
 the remotely resolved Vulkan APK.

@@ -1,18 +1,17 @@
-# Files fetched back from https://reposilite.louwers.dev/snapshots and checked
-# against the adjacent server-provided .sha256 resources.
+# SHA-256 of POMs and AARs fetched from Reposilite through the otherwise-empty
+# Gradle dependency cache documented in remote-resolution.log.
 
-ccbab0a8b0b1582348c90cbc29d9a7397fa0efa48eac2310b9fd5d35c49b2bd9  android-sdk-opengl/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.aar
-3fc9f7fd3e9b3be9b7ec8a93f9deac59fe7b9b0510b4759cadfeb638b05b0252  android-sdk-opengl/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.pom
-8e9177e7bc36e75e72ee953c382b2a9a1d09757988e81f1542f797514c96e90a  android-sdk-opengl/maven-metadata.xml
+86e2c84962af1ea7c72696113ec37cdea1d4abbfb65efabf984dc20cdc074d63  android-plugin-api/android-plugin-api-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.aar
+f590178bdc5152d8bf940811b7edabefc182152d34aa5310c34b74a70453a43d  android-plugin-api/android-plugin-api-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.pom
 
-745708b8f234352b55692be9fbf24603164cbc5647728c22a7bfcb4c114eb11d  android-sdk-vulkan/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.aar
-e5d711e7ac8078a6028f74434106fe2abeb5c40a402178e4802530ceef9ffb60  android-sdk-vulkan/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.pom
-a6795e9ff7dc5f3fa377d54df4b163e7b1b5845fd97b642cc977729d45ed8089  android-sdk-vulkan/maven-metadata.xml
+76cdff048fa440d6f4bb57c2e519d89bf4c7ded181ee66d17725365d9c4e5e5c  android-sdk-opengl/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.aar
+202bf5592bdd0d1f1a8d38a6afb0796f6fb70600d68d79d6c871e5c7d8be0810  android-sdk-opengl/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.pom
 
-745708b8f234352b55692be9fbf24603164cbc5647728c22a7bfcb4c114eb11d  android-sdk/android-sdk-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.aar
-07559435f5a97b7832c312f2943a1cde47db8f5e0532afe25ac7dfadc36c1b14  android-sdk/android-sdk-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.pom
-533ff1601528c3053322e6e95e2d38006530b70bf29a35509d97402b4c6b2a0a  android-sdk/maven-metadata.xml
+452f23b2a8aefd5f63ae6b94b77a7164addeb27efec6b88aa09883eb4e9d9e66  android-sdk-vulkan/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.aar
+684061d2a565a1ef6450960ad89fcd7ec91384f9618ea7d50b7c0a877623b729  android-sdk-vulkan/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.pom
 
-975493b4c3ceba1b2bf65d126d3782852cc27cde7879dca6b471a773cbc9941e  fill-extrusion-shadows/fill-extrusion-shadows-0.1.0-1b67aa94ed7f.20260804173611-20260804.174628-1.aar
-85a05703ec2de88fd1ef1e0aae5412d07e1f50c633d8bbaa0ec220d0d184d776  fill-extrusion-shadows/fill-extrusion-shadows-0.1.0-1b67aa94ed7f.20260804173611-20260804.174628-1.pom
-33925f621c5ebff39d0fcb7375af1b7b44aa1e7f165f49d764f2fe24ecff23e6  fill-extrusion-shadows/maven-metadata.xml
+452f23b2a8aefd5f63ae6b94b77a7164addeb27efec6b88aa09883eb4e9d9e66  android-sdk/android-sdk-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.aar
+23a990064ca7dc3718c3ece799257cc35a089ba552935a51b089f30e5f396f04  android-sdk/android-sdk-13.4.1-plugin.5e6fd6bb788c.20260804185117-20260804.185149-1.pom
+
+da4e95d3db1cd41c9ed95bba041537cb27433b46dd0007f18414a120a3223bb8  fill-extrusion-shadows/fill-extrusion-shadows-0.1.0-52062a2a81fc.20260804185117-20260804.190105-1.aar
+2c7de9f7552c5bf72d8c37da6f24d3ad76a7ea429be78475a9bd5b034d1884fb  fill-extrusion-shadows/fill-extrusion-shadows-0.1.0-52062a2a81fc.20260804185117-20260804.190105-1.pom
