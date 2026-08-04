@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   android:
-    name: Build and release Android AAR
+    name: Build Android AAR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,9 +57,78 @@ jobs:
           cd release-assets
           sha256sum "$PLUGIN-$VERSION.aar" > "$PLUGIN-$VERSION.aar.sha256"
 
-      - name: Create GitHub release and upload Android artifact
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-release
+          path: release-assets/*
+
+  ios:
+    name: Build iOS XCFramework
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out plugin-enabled MapLibre Native
+        uses: actions/checkout@v4
+        with:
+          repository: louwers/maplibre-native
+          ref: cross-platform-plugin-api
+          path: maplibre-native
+          submodules: recursive
+
+      - uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      - name: Build iOS plugin
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          bazel build \
+            --@maplibre//:renderer=metal \
+            --override_module=maplibre="$GITHUB_WORKSPACE/maplibre-native" \
+            --override_module=maplibre-tile-spec="$GITHUB_WORKSPACE/maplibre-native/vendor/maplibre-tile-spec" \
+            --embed_label="$VERSION" \
+            --define=plugin_version="$VERSION" \
+            //plugins/fill-extrusion-shadows:FillExtrusionShadows.xcframework
+
+      - name: Stage release assets
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p release-assets
+          cp \
+            bazel-bin/plugins/fill-extrusion-shadows/FillExtrusionShadows.xcframework.xcframework.zip \
+            "release-assets/FillExtrusionShadows-$VERSION.xcframework.zip"
+          cd release-assets
+          shasum -a 256 \
+            "FillExtrusionShadows-$VERSION.xcframework.zip" \
+            > "FillExtrusionShadows-$VERSION.xcframework.zip.sha256"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ios-release
+          path: release-assets/*
+
+  release:
+    name: Publish GitHub release
+    needs:
+      - android
+      - ios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: '*-release'
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub release and upload artifacts
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           PLUGIN: ${{ inputs.plugin }}
           VERSION: ${{ inputs.version }}
         run: |

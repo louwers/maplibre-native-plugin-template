@@ -15,7 +15,7 @@ dependencyResolutionManagement {
         mavenCentral()
         maven("https://jitpack.io") {
             content {
-                includeGroup("com.github.louwers.maplibre-native-plugin-template")
+                includeGroup("com.github.louwers")
             }
         }
     }
@@ -25,9 +25,7 @@ dependencyResolutionManagement {
 ```kotlin
 dependencies {
     implementation("org.maplibre.gl:android-sdk-opengl:<plugin-enabled-maplibre-version>")
-    implementation(
-        "com.github.louwers.maplibre-native-plugin-template:fill-extrusion-shadows:0.0.1"
-    )
+    implementation("com.github.louwers:maplibre-native-plugin-template:0.0.1")
 }
 ```
 
@@ -39,6 +37,18 @@ layer.setProperties(FillExtrusionShadows.fillExtrusionShadow(true))
 ```
 
 The selected MapLibre artifact must contain plugin ABI v1. The plugin POM does not select a renderer transitively.
+
+## Consume on iOS with Swift Package Manager
+
+Add `https://github.com/louwers/maplibre-native-plugin-template` as a package dependency and select the `FillExtrusionShadows` product. Link it alongside a MapLibre build that contains plugin ABI v1, then register the plugin before constructing or loading a dependent style:
+
+```swift
+import FillExtrusionShadows
+
+try FillExtrusionShadowsPlugin.registerPlugin()
+```
+
+Each GitHub release also includes a prebuilt `FillExtrusionShadows.xcframework.zip` for consumers that do not use Swift Package Manager.
 
 ## Build Android locally
 

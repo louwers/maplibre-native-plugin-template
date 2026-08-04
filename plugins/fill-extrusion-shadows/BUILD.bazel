@@ -17,10 +17,10 @@ objc_library(
         "-std=c++20",
         "-fobjc-arc",
         "-fvisibility=hidden",
+        "-DMLN_SHADOW_PLUGIN_VERSION=\\\"$(plugin_version)\\\"",
     ],
     defines = [
         "MLN_SHADOW_IOS=1",
-        "MLN_SHADOW_PLUGIN_VERSION=\\\"0.0.1-dev\\\"",
     ],
     includes = [
         "ios/include",
@@ -37,8 +37,11 @@ objc_library(
 
 apple_bundle_version(
     name = "FillExtrusionShadows.version",
-    build_version = "1",
-    short_version_string = "0.0.1",
+    build_label_pattern = "{version}",
+    build_version = "{version}",
+    capture_groups = {"version": "\\d+\\.\\d+\\.\\d+"},
+    fallback_build_label = "0.0.2",
+    short_version_string = "{version}",
 )
 
 apple_static_xcframework(
