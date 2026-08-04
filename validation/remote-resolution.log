@@ -1,0 +1,19 @@
+Clean Gradle user home: /private/tmp/maplibre-plugin-gradle-20260804173611
+Tasks: assembleOpenglDebug assembleVulkanDebug
+
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/plugins/fill-extrusion-shadows/0.1.0-1b67aa94ed7f.20260804173611-SNAPSHOT/maven-metadata.xml
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/plugins/fill-extrusion-shadows/0.1.0-1b67aa94ed7f.20260804173611-SNAPSHOT/fill-extrusion-shadows-0.1.0-1b67aa94ed7f.20260804173611-20260804.174628-1.pom
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/plugins/fill-extrusion-shadows/0.1.0-1b67aa94ed7f.20260804173611-SNAPSHOT/fill-extrusion-shadows-0.1.0-1b67aa94ed7f.20260804173611-20260804.174628-1.module
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/plugins/fill-extrusion-shadows/0.1.0-1b67aa94ed7f.20260804173611-SNAPSHOT/fill-extrusion-shadows-0.1.0-1b67aa94ed7f.20260804173611-20260804.174628-1.aar
+
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-opengl/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/maven-metadata.xml
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-opengl/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.pom
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-opengl/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.module
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-opengl/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/android-sdk-opengl-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.aar
+
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-vulkan/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/maven-metadata.xml
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-vulkan/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.pom
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-vulkan/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.module
+Downloading https://reposilite.louwers.dev/snapshots/org/maplibre/gl/android-sdk-vulkan/13.4.1-plugin.5e6fd6bb788c.20260804173611-SNAPSHOT/android-sdk-vulkan-13.4.1-plugin.5e6fd6bb788c.20260804173611-20260804.173645-1.aar
+
+BUILD SUCCESSFUL in 1m 11s

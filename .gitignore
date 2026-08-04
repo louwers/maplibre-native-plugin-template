@@ -1,0 +1,8 @@
+.gradle/
+.idea/
+**/.cxx/
+**/build/
+local.properties
+reposilite.properties
+dependency-resolution/
+
