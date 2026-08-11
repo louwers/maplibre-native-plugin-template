@@ -1,10 +1,10 @@
-# MapLibre Native existing-layer plugin interface
+# MapLibre Native plugin interface
 
 Status: Android OpenGL/Vulkan and iOS Metal v1 implementations.
 
 ## Design goal
 
-A plugin can add typed constant properties and rendering behavior to an existing style-layer type without adding plugin-specific code to MapLibre Native. Core knows how to register generic descriptors, store generic property values, schedule lifecycle callbacks, and expose short-lived geometry packets. It does not know that a shadow plugin exists, what a shadow means, or how a shadow is drawn.
+A plugin can add typed constant properties and rendering behavior to an existing style-layer type, or register a new source-less style-layer type, without adding plugin-specific code to MapLibre Native. Core knows how to register generic descriptors, store generic property values, schedule lifecycle callbacks, expose short-lived geometry packets, and load plugin resources. It does not know that a shadow or GLTF plugin exists.
 
 Adding another plugin requires publishing a new plugin library. A core change is needed only when a future plugin category needs a genuinely new generic host capability, such as a geometry packet type not represented by v1.
 
@@ -15,7 +15,9 @@ The public boundary is the pure-C header `mbgl/plugin/plugin_api.h`. The plugin 
 Core owns:
 
 - descriptor validation and process-wide registration;
-- generic constant paint-property parsing, storage, cloning, lookup, serialization, observer notification, and repaint scheduling;
+- generic constant paint/layout property parsing, storage, cloning, lookup, serialization, observer notification, and repaint scheduling;
+- source-less plugin layer creation through the common `LayerManager` fallback, without changing generated/platform factory maps;
+- camera snapshots and resource requests routed through MapLibre's `FileSource`;
 - deterministic callback ordering and per-render-layer plugin instances;
 - backend context setup, graphics-state invalidation, failure isolation, and short-lived draw packets;
 - adapters that describe existing fill-extrusion buffers without copying or changing them.
@@ -29,13 +31,13 @@ The plugin owns:
 
 ## Registration and compatibility
 
-`mln_plugin_descriptor_v1` is size-versioned and contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions. Each extension names a target layer type, priority, supported backend mask, typed properties, and lifecycle callbacks.
+`mln_plugin_descriptor_v1` contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions and/or new layer-type declarations. An extension names an existing target type and callback priority. A layer-type declaration names the new style type, render stage, 3D behavior, properties, supported backends, and lifecycle callbacks.
 
-The v1 value types are boolean, float, float2, RGBA color, and length-aware UTF-8 string. Only constant paint properties are accepted. Expressions, transitions, coercion, data-driven plugin properties, and layout properties are rejected.
+The v1 value types are boolean, float, float2, RGBA color, and length-aware UTF-8 string. Existing-layer extensions accept constant paint properties. New plugin layers accept constant paint and layout properties. Expressions, transitions, coercion, and data-driven plugin properties are rejected.
 
 `mln_plugin_register_v1` copies strings, property metadata, and defaults into core-owned storage. The native library continues to own callback code and must stay loaded for the process lifetime. Unloading and unregistering are intentionally unsupported.
 
-Registration is thread-safe. It must happen before a style that uses a plugin property is parsed. Identical repeated registration succeeds as `ALREADY_REGISTERED`. Core rejects malformed descriptors, incompatible ABI ranges, conflicting IDs, duplicate properties, and conflicting layer extensions with a diagnostic copied into the caller's buffer.
+Registration is thread-safe. It must happen before a style that uses a plugin property or type is parsed. Identical repeated registration succeeds as `ALREADY_REGISTERED`. Core rejects malformed descriptors, incompatible ABI ranges, conflicting IDs or layer types, duplicate properties, and conflicting extensions with a diagnostic copied into the caller's buffer.
 
 ## Style behavior
 
@@ -47,7 +49,7 @@ Plugin values are stored in a generic bag in immutable layer implementation stat
 
 Registration may occur on any thread. Applications should perform it on startup before constructing or loading a dependent style.
 
-`create_instance`, `prepare_frame`, `render_before_layer`, `context_lost`, and `destroy_instance` are called on the render thread. There is one instance per matching render layer. The plugin must not call MapLibre recursively or block the render thread.
+`create_instance`, `prepare_frame`, the layer render callback, `context_lost`, and `destroy_instance` are called on the render thread. There is one instance per matching render layer. File-loader completion is delivered on the requesting render run loop. Response bytes are borrowed only during that callback; a plugin copies anything it retains. Host request IDs can be cancelled, and `request_repaint` marshals invalidation through the renderer observer.
 
 Property snapshots, backend handles, command buffers, draw packets, and buffer handles are borrowed and valid only until the callback returns. The plugin may copy scalar values but must never retain a host graphics handle. Plugin-created GPU resources are owned by the plugin instance.
 
@@ -56,6 +58,8 @@ Callbacks return a status. On failure, core logs once, destroys and disables onl
 ## Render stages and packets
 
 After drawable upload and before the main render pass, core calls `prepare_frame`. Immediately before the target layer group in its normal pass, core calls `render_before_layer`, placing a plugin composite beneath the unmodified base layer.
+
+A new source-less plugin layer gets an ordinary ordered layer group but no generated bucket or drawable. Its descriptor-selected callback runs at that group's exact position in the 3D, opaque, or translucent pass. The frame includes viewport/camera values, normalized-Mercator projection matrices, pixel ratio, Vulkan surface pre-rotation, and backend handles.
 
 Fill-extrusion packets expose the already-uploaded index and semantic vertex buffers, tile matrix, evaluated constant values, interpolation factors, extrusion height conversion factor, and layer opacity. OpenGL exposes the ordinary triangle mesh. Vulkan exposes roof triangles and instanced walls separately. Plugins must use packet-declared offsets, strides, and attribute types and must not mutate buffer contents.
 
@@ -88,12 +92,18 @@ When the property is enabled, the plugin projects upper extrusion vertices towar
 
 Future properties (`-x`, `-y`, `-h-scale`, `-intensity`, and `-blur`) become additional descriptor entries and plugin snapshot reads. They do not require generated core layer properties or a new ABI.
 
+## Worked example: GLTF layer
+
+The `gltf-layer` plugin registers source-less type `gltf` for Android OpenGL/Vulkan and iOS Metal. Its constant layout properties are `model-uri`, `model-position`, `model-altitude`, `model-heading`, and `model-scale`; `model-opacity` is a paint property. A model URI is requested through the host API, so MapLibre's cache, resource transform, online/offline policy, and error path remain authoritative.
+
+The shared implementation parses GLB bytes with pinned TinyGLTF v2.9.7, flattens scene/node transforms into a backend-neutral vertex/index model, and maps glTF's Y-up meter coordinates into normalized Web Mercator at the requested longitude/latitude. Each backend owns only its vertex/index buffers, shaders, and pipeline. V1 renders static triangle meshes, base-color factors, alpha blending, and double-sided materials. Texture upload, animation, skinning, morph targets, compressed geometry, and terrain anchoring are explicitly deferred.
+
 ## iOS and Metal
 
 The static `FillExtrusionShadows` framework provides an Objective-C registration wrapper and calls the same C descriptor code as Android. The plugin is registered before a dependent `MLNStyle` is parsed. MapLibre passes the active Metal command buffer, encoder, and existing fill-extrusion buffers only for the callback duration. The prepare callback builds the union mask in a private `R8Unorm` render target; the before-layer callback samples it in one full-screen composite. The plugin retains only its own pipelines, mask texture, and depth/stencil state. The removed experimental `MLNPluginLayer` API is not part of this design and is not kept as a parallel ABI.
 
 The Bazel sample uses a local MapLibre module override so it compiles against the exact host ABI implementation. Swift Package Manager distribution is layered on the same framework target; it does not introduce another plugin interface.
 
-## Versioning rules
+## ABI v1 evolution
 
-All public structs begin with `struct_size`; callbacks read only fields available in the negotiated ABI. Additive fields append to structs. Semantic or ownership changes require a new ABI version and registration symbol. Plugin artifact versions and host artifact versions remain independent, while CI compiles each plugin against the exact host snapshot used by the validation app.
+This API has not been published, so the implementation remains ABI v1 and no parallel v2 surface is introduced. Public structs retain `struct_size` for defensive validation and future additive growth. Plugin artifact versions and host artifact versions remain independent, while CI compiles each plugin against the exact host snapshot used by the validation app.

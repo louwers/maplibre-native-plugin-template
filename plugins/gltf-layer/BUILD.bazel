@@ -1,0 +1,64 @@
+load("@rules_apple//apple:apple.bzl", "apple_static_xcframework")
+load("@rules_apple//apple:versioning.bzl", "apple_bundle_version")
+load("@rules_cc//cc:defs.bzl", "objc_library")
+
+objc_library(
+    name = "GltfLayer",
+    srcs = [
+        "ios/src/GltfLayer.mm",
+        "ios/src/gltf_metal.mm",
+        "shared/cpp/gltf_layer.cpp",
+    ],
+    hdrs = [
+        "ios/include/GltfLayer/GltfLayer.h",
+        "shared/include/gltf_layer.hpp",
+    ],
+    copts = [
+        "-std=c++20",
+        "-fobjc-arc",
+        "-fvisibility=hidden",
+        "-DMLN_GLTF_PLUGIN_VERSION=$(plugin_version)",
+    ],
+    defines = ["MLN_GLTF_IOS=1"],
+    includes = [
+        "ios/include",
+        "shared/include",
+    ],
+    module_name = "GltfLayer",
+    sdk_frameworks = [
+        "Foundation",
+        "Metal",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:tinygltf",
+        "@maplibre//:plugin-api",
+    ],
+)
+
+apple_bundle_version(
+    name = "GltfLayer.version",
+    build_label_pattern = "{version}",
+    build_version = "{version}",
+    capture_groups = {"version": "\\d+\\.\\d+\\.\\d+"},
+    fallback_build_label = "0.1.0",
+    short_version_string = "{version}",
+)
+
+apple_static_xcframework(
+    name = "GltfLayer.xcframework",
+    bundle_id = "org.maplibre.plugins.gltf-layer",
+    bundle_name = "GltfLayer",
+    ios = {
+        "simulator": [
+            "arm64",
+            "x86_64",
+        ],
+        "device": ["arm64"],
+    },
+    minimum_os_versions = {"ios": "14.0"},
+    public_hdrs = ["ios/include/GltfLayer/GltfLayer.h"],
+    version = ":GltfLayer.version",
+    visibility = ["//visibility:public"],
+    deps = [":GltfLayer"],
+)

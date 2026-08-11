@@ -13,7 +13,8 @@ objc_library(
         "UIKit",
     ],
     deps = [
-        "@fill_extrusion_shadows_release//:FillExtrusionShadows",
+        "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
+        "//plugins/gltf-layer:GltfLayer",
         "@maplibre//platform:ios-sdk",
     ],
 )
@@ -24,7 +25,10 @@ ios_application(
     families = ["iphone"],
     infoplists = ["Info.plist"],
     minimum_os_version = "14.0",
-    resources = ["//:liberty_shadow_style"],
+    resources = [
+        "//:liberty_shadow_style",
+        "//:positron_gltf_style",
+    ],
     visibility = ["//visibility:public"],
     deps = [":app_sources"],
 )

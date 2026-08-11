@@ -33,6 +33,7 @@ dependencies {
     "openglImplementation"("org.maplibre.gl:android-sdk-opengl:${maplibreVersion.get()}")
     "vulkanImplementation"("org.maplibre.gl:android-sdk-vulkan:${maplibreVersion.get()}")
     implementation(project(":plugins:fill-extrusion-shadows"))
+    implementation(project(":plugins:gltf-layer"))
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:rules:1.7.0")

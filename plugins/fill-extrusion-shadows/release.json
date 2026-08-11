@@ -1,0 +1,6 @@
+{
+  "androidArtifact": "fill-extrusion-shadows",
+  "iosTarget": "//plugins/fill-extrusion-shadows:FillExtrusionShadows.xcframework",
+  "iosBazelOutput": "bazel-bin/plugins/fill-extrusion-shadows/FillExtrusionShadows.xcframework.xcframework.zip",
+  "iosAssetName": "FillExtrusionShadows"
+}

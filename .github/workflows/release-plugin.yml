@@ -11,6 +11,7 @@ on:
         type: choice
         options:
           - fill-extrusion-shadows
+          - gltf-layer
       version:
         description: Semantic version, for example 0.0.1
         required: true
@@ -52,10 +53,11 @@ jobs:
           PLUGIN: ${{ inputs.plugin }}
           VERSION: ${{ inputs.version }}
         run: |
+          ARTIFACT="$(jq -r .androidArtifact "plugins/$PLUGIN/release.json")"
           mkdir -p release-assets
-          cp "plugins/$PLUGIN/build/outputs/aar/$PLUGIN-release.aar" "release-assets/$PLUGIN-$VERSION.aar"
+          cp "plugins/$PLUGIN/build/outputs/aar/$ARTIFACT-release.aar" "release-assets/$ARTIFACT-$VERSION.aar"
           cd release-assets
-          sha256sum "$PLUGIN-$VERSION.aar" > "$PLUGIN-$VERSION.aar.sha256"
+          sha256sum "$ARTIFACT-$VERSION.aar" > "$ARTIFACT-$VERSION.aar.sha256"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -84,28 +86,30 @@ jobs:
 
       - name: Build iOS plugin
         env:
+          PLUGIN: ${{ inputs.plugin }}
           VERSION: ${{ inputs.version }}
         run: |
+          TARGET="$(jq -r .iosTarget "plugins/$PLUGIN/release.json")"
           bazel build \
             --@maplibre//:renderer=metal \
             --override_module=maplibre="$GITHUB_WORKSPACE/maplibre-native" \
             --override_module=maplibre-tile-spec="$GITHUB_WORKSPACE/maplibre-native/vendor/maplibre-tile-spec" \
             --embed_label="$VERSION" \
             --define=plugin_version="$VERSION" \
-            //plugins/fill-extrusion-shadows:FillExtrusionShadows.xcframework
+            "$TARGET"
 
       - name: Stage release assets
         env:
+          PLUGIN: ${{ inputs.plugin }}
           VERSION: ${{ inputs.version }}
         run: |
+          OUTPUT="$(jq -r .iosBazelOutput "plugins/$PLUGIN/release.json")"
+          ASSET="$(jq -r .iosAssetName "plugins/$PLUGIN/release.json")"
           mkdir -p release-assets
-          cp \
-            bazel-bin/plugins/fill-extrusion-shadows/FillExtrusionShadows.xcframework.xcframework.zip \
-            "release-assets/FillExtrusionShadows-$VERSION.xcframework.zip"
+          cp "$OUTPUT" "release-assets/$ASSET-$VERSION.xcframework.zip"
           cd release-assets
-          shasum -a 256 \
-            "FillExtrusionShadows-$VERSION.xcframework.zip" \
-            > "FillExtrusionShadows-$VERSION.xcframework.zip.sha256"
+          shasum -a 256 "$ASSET-$VERSION.xcframework.zip" \
+            > "$ASSET-$VERSION.xcframework.zip.sha256"
 
       - uses: actions/upload-artifact@v7
         with:

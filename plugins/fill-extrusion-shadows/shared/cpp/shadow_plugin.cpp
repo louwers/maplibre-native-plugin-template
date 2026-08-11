@@ -135,7 +135,9 @@ const mln_plugin_descriptor_v1 descriptor{sizeof(mln_plugin_descriptor_v1),
                                           MLN_PLUGIN_ABI_VERSION_1,
                                           MLN_PLUGIN_ABI_VERSION_1,
                                           &layerExtension,
-                                          1};
+                                          1,
+                                          nullptr,
+                                          0};
 
 } // namespace
 

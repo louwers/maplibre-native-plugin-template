@@ -4,6 +4,7 @@ import android.app.Application;
 
 import org.maplibre.android.MapLibre;
 import org.maplibre.plugins.shadows.FillExtrusionShadowsPlugin;
+import org.maplibre.plugins.gltf.GltfLayerPlugin;
 
 public final class DemoApplication extends Application {
   @Override
@@ -11,6 +12,6 @@ public final class DemoApplication extends Application {
     super.onCreate();
     MapLibre.getInstance(this);
     FillExtrusionShadowsPlugin.register();
+    GltfLayerPlugin.register();
   }
 }
-
