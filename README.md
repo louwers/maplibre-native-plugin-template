@@ -95,4 +95,15 @@ Validated output is checked in as `screenshots/ios-shadow-enabled.png` and `scre
 
 The renderer Java API is compile-only and removed from the published POM. MapLibre and plugins may each use a private `c++_static` runtime; only C structs, callbacks, function pointers, and opaque handles cross the boundary. Applications select exactly one renderer artifact themselves.
 
+## Render tests
+
+Render fixtures and committed `expected.png` images live with the plugin that owns them under `plugins/<plugin>/render-tests`. One repository-level executable registers the linked plugins, discovers every available manifest, and runs MapLibre Native's standard render-test harness for each suite. Build and run the Metal configuration with:
+
+```shell
+bazel build --@maplibre//:renderer=metal //:render_tests_metal
+./bazel-bin/render_tests_metal --plugin-test-root "$PWD"
+```
+
+See [render-tests/README.md](render-tests/README.md) for filtering, rebaselining, and the portable Linux target. The same commands run in the `Plugin render tests` workflow.
+
 See [designs/plugin-interface.md](designs/plugin-interface.md) for the API contract and lifecycle. Each plugin has a `release.json`; the `Release plugin` workflow uses that metadata to build the selected Android AAR and iOS XCFramework without plugin-specific workflow branches.

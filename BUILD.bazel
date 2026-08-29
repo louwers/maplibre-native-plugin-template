@@ -1,3 +1,6 @@
+load("@rules_apple//apple:macos.bzl", "macos_command_line_application")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test", "objc_library")
+
 filegroup(
     name = "liberty_shadow_style",
     srcs = ["examples/android-app/app/src/main/assets/liberty-shadow.json"],
@@ -27,4 +30,48 @@ cc_library(
     ],
     includes = ["vendor/tinygltf"],
     visibility = ["//visibility:public"],
+)
+
+plugin_render_test_data = [
+    "//plugins/gltf-layer:render_test_data",
+    "//plugins/rectangle-layer:render_test_data",
+]
+
+cc_test(
+    name = "render_tests",
+    srcs = ["render-tests/main.cpp"],
+    copts = [
+        "-std=c++20",
+        "-DMLN_PLUGIN_RENDER_TEST_SKIP_SHADOWS=1",
+    ],
+    data = ["MODULE.bazel"] + plugin_render_test_data,
+    tags = ["no-sandbox"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//plugins/gltf-layer:gltf_core",
+        "//plugins/rectangle-layer:rectangle_core",
+        "@maplibre//render-test:render-test-srcs",
+        "@maplibre//vendor:maplibre-native-base",
+    ],
+)
+
+objc_library(
+    name = "render_tests_metal_lib",
+    srcs = ["render-tests/main.cpp"],
+    copts = ["-std=c++20"],
+    deps = [
+        "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
+        "//plugins/gltf-layer:GltfLayer",
+        "//plugins/rectangle-layer:RectangleLayer",
+        "@maplibre//render-test:render-test-srcs",
+        "@maplibre//vendor:maplibre-native-base",
+    ],
+)
+
+macos_command_line_application(
+    name = "render_tests_metal",
+    minimum_deployment_os_version = "14.0",
+    minimum_os_version = "14.0",
+    visibility = ["//visibility:public"],
+    deps = [":render_tests_metal_lib"],
 )

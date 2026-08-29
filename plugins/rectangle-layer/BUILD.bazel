@@ -1,7 +1,20 @@
 load("@rules_apple//apple:apple.bzl", "apple_static_xcframework")
-load("@rules_apple//apple:macos.bzl", "macos_command_line_application")
 load("@rules_apple//apple:versioning.bzl", "apple_bundle_version")
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test", "objc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
+
+filegroup(
+    name = "render_test_data",
+    srcs = glob(
+        ["render-tests/**"],
+        exclude = [
+            "render-tests/**/actual.png",
+            "render-tests/**/diff.png",
+            "render-tests/cache.db",
+            "render-tests/results/**",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
 
 cc_library(
     name = "rectangle_core",
@@ -65,40 +78,4 @@ apple_static_xcframework(
     version = ":RectangleLayer.version",
     visibility = ["//visibility:public"],
     deps = [":RectangleLayer"],
-)
-
-cc_test(
-    name = "render_tests",
-    srcs = ["render-tests/main.cpp"],
-    args = [
-        "--manifestPath",
-        "$(location render-tests/manifest.json)",
-    ],
-    data = glob(["render-tests/**"]),
-    tags = ["no-sandbox"],
-    target_compatible_with = ["@platforms//os:linux"],
-    deps = [
-        ":rectangle_core",
-        "@maplibre//render-test:render-test-srcs",
-        "@maplibre//vendor:maplibre-native-base",
-    ],
-)
-
-objc_library(
-    name = "render_tests_metal_lib",
-    srcs = ["render-tests/main.cpp"],
-    data = glob(["render-tests/**"]),
-    deps = [
-        ":rectangle_core",
-        "@maplibre//render-test:render-test-srcs",
-        "@maplibre//vendor:maplibre-native-base",
-    ],
-)
-
-macos_command_line_application(
-    name = "render_tests_metal",
-    minimum_deployment_os_version = "14.0",
-    minimum_os_version = "14.0",
-    visibility = ["//visibility:public"],
-    deps = [":render_tests_metal_lib"],
 )

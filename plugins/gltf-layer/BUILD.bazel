@@ -1,6 +1,38 @@
 load("@rules_apple//apple:apple.bzl", "apple_static_xcframework")
 load("@rules_apple//apple:versioning.bzl", "apple_bundle_version")
-load("@rules_cc//cc:defs.bzl", "objc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
+
+filegroup(
+    name = "render_test_data",
+    srcs = glob(
+        ["render-tests/**"],
+        exclude = [
+            "render-tests/**/actual.png",
+            "render-tests/**/diff.png",
+            "render-tests/cache.db",
+            "render-tests/results/**",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "gltf_core",
+    srcs = ["shared/cpp/gltf_layer.cpp"],
+    hdrs = ["shared/include/gltf_layer.hpp"],
+    copts = [
+        "-std=c++20",
+        "-fvisibility=hidden",
+        "-DMLN_GLTF_PLUGIN_VERSION=\"$(plugin_version)\"",
+    ],
+    includes = ["shared/include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:tinygltf",
+        "@maplibre//:plugin-api",
+    ],
+)
 
 objc_library(
     name = "GltfLayer",

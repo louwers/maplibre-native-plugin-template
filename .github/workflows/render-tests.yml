@@ -1,0 +1,49 @@
+name: Plugin render tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  metal:
+    name: Shared Metal runner
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check out plugin-enabled MapLibre Native
+        uses: actions/checkout@v4
+        with:
+          repository: louwers/maplibre-native
+          ref: cross-platform-plugin-api
+          path: maplibre-native
+          submodules: recursive
+
+      - uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      - name: Install renderer dependencies
+        run: brew install glfw icu4c jpeg-turbo libpng libuv webp
+
+      - name: Build shared runner
+        run: |
+          bazel build \
+            --@maplibre//:renderer=metal \
+            --override_module=maplibre="$GITHUB_WORKSPACE/maplibre-native" \
+            --override_module=maplibre-tile-spec="$GITHUB_WORKSPACE/maplibre-native/vendor/maplibre-tile-spec" \
+            //:render_tests_metal
+
+      - name: Run all plugin manifests
+        run: |
+          ./bazel-bin/render_tests_metal \
+            --plugin-test-root "$GITHUB_WORKSPACE"
