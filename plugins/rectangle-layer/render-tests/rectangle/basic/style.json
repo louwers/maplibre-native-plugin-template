@@ -1,0 +1,50 @@
+{
+  "version": 8,
+  "metadata": {
+    "test": {
+      "width": 256,
+      "height": 256
+    }
+  },
+  "center": [0, 0],
+  "zoom": 2,
+  "sources": {
+    "points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {"kind": "wide", "fill": "#e00"},
+            "geometry": {"type": "Point", "coordinates": [-8, 0]}
+          },
+          {
+            "type": "Feature",
+            "properties": {"kind": "tall", "fill": "#06c"},
+            "geometry": {"type": "MultiPoint", "coordinates": [[8, -4], [8, 4]]}
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "#f2f3f5"}
+    },
+    {
+      "id": "points",
+      "type": "rectangle",
+      "source": "points",
+      "paint": {
+        "rectangle-color": ["get", "fill"],
+        "rectangle-width": ["match", ["get", "kind"], "wide", 52, 24],
+        "rectangle-height": ["match", ["get", "kind"], "tall", 44, 22],
+        "rectangle-stroke-width": 3,
+        "rectangle-stroke-color": "#111"
+      }
+    }
+  ]
+}

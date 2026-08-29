@@ -29,12 +29,12 @@ apple_static_xcframework_import(
 # matching MapLibre Native checkout.
 local_path_override(
     module_name = "maplibre",
-    path = "..",
+    path = "../maplibre-native",
 )
 
 local_path_override(
     module_name = "maplibre-tile-spec",
-    path = "../vendor/maplibre-tile-spec",
+    path = "../maplibre-native/vendor/maplibre-tile-spec",
 )
 
 # MapLibre Native currently pins a cxx.rs release newer than the Bazel Central

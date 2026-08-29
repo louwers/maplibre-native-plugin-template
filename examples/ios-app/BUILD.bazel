@@ -15,6 +15,7 @@ objc_library(
     deps = [
         "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
         "//plugins/gltf-layer:GltfLayer",
+        "//plugins/rectangle-layer:RectangleLayer",
         "@maplibre//platform:ios-sdk",
     ],
 )
@@ -28,6 +29,7 @@ ios_application(
     resources = [
         "//:liberty_shadow_style",
         "//:positron_gltf_style",
+        "//:rectangle_style",
     ],
     visibility = ["//visibility:public"],
     deps = [":app_sources"],

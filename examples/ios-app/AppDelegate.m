@@ -2,6 +2,7 @@
 
 #import <FillExtrusionShadows/FillExtrusionShadows.h>
 #import <GltfLayer/GltfLayer.h>
+#import <RectangleLayer/RectangleLayer.h>
 #import "MLNMapCamera.h"
 #import "MLNMapView.h"
 #import "MLNMapViewDelegate.h"
@@ -13,22 +14,24 @@
 @property(nonatomic, strong) UIButton *sceneToggle;
 @property(nonatomic) BOOL shadowEnabled;
 @property(nonatomic) BOOL showingModel;
+@property(nonatomic) BOOL showingRectangles;
 @end
 
 @implementation AppDelegate
 
 - (void)mapView:(MLNMapView *)mapView didFinishLoadingStyle:(MLNStyle *)style {
     MLNStyleLayer *modelLayer = [style layerWithIdentifier:@"eiffel-tower-gltf"];
+    MLNStyleLayer *rectangleLayer = [style layerWithIdentifier:@"points"];
     NSLog(@"Loaded style with %lu layers; GLTF Objective-C wrapper %@",
           (unsigned long)style.layers.count,
           modelLayer ? @"is present" : @"is missing");
-    CLLocationCoordinate2D center = modelLayer
-                                        ? CLLocationCoordinate2DMake(48.8582621, 2.2944962)
-                                        : CLLocationCoordinate2DMake(52.5096, 13.3760);
+    CLLocationCoordinate2D center = modelLayer ? CLLocationCoordinate2DMake(48.8582621, 2.2944962)
+                                    : rectangleLayer ? CLLocationCoordinate2DMake(48.8566, 2.3522)
+                                                     : CLLocationCoordinate2DMake(52.5096, 13.3760);
     mapView.camera = [MLNMapCamera cameraLookingAtCenterCoordinate:center
-                                                          altitude:modelLayer ? 650 : 850
-                                                             pitch:modelLayer ? 62 : 52
-                                                           heading:modelLayer ? 28 : 20];
+                                                          altitude:modelLayer ? 650 : rectangleLayer ? 1200000 : 850
+                                                             pitch:modelLayer ? 62 : rectangleLayer ? 0 : 52
+                                                           heading:modelLayer ? 28 : rectangleLayer ? 0 : 20];
 }
 
 - (NSURL *)shadowStyleURLWithShadowEnabled:(BOOL)enabled {
@@ -57,6 +60,12 @@
     return styleURL;
 }
 
+- (NSURL *)rectangleStyleURL {
+    NSURL *styleURL = [[NSBundle mainBundle] URLForResource:@"rectangle-style" withExtension:@"json"];
+    NSAssert(styleURL, @"The bundled rectangle style is missing");
+    return styleURL;
+}
+
 - (void)updateShadowToggleTitle {
     NSString *title = self.shadowEnabled ? @"Shadows: ON · tap to compare" : @"Shadows: OFF · tap to compare";
     [self.shadowToggle setTitle:title forState:UIControlStateNormal];
@@ -66,7 +75,7 @@
 }
 
 - (void)toggleShadows {
-    if (self.showingModel) return;
+    if (self.showingModel || self.showingRectangles) return;
     self.shadowEnabled = !self.shadowEnabled;
     MLNMapCamera *camera = self.mapView.camera;
     self.mapView.styleURL = [self shadowStyleURLWithShadowEnabled:self.shadowEnabled];
@@ -75,24 +84,32 @@
 }
 
 - (void)updateSceneControls {
-    [self.sceneToggle setTitle:self.showingModel ? @"Show building shadows" : @"Show Eiffel Tower GLB"
+    [self.sceneToggle setTitle:self.showingModel ? @"Show building shadows"
+                              : self.showingRectangles ? @"Show Eiffel Tower GLB" : @"Show rectangle layer"
                       forState:UIControlStateNormal];
-    self.sceneToggle.frame = CGRectMake(18, self.showingModel ? 66 : 116, 252, 42);
-    self.shadowToggle.hidden = self.showingModel;
+    self.sceneToggle.frame = CGRectMake(18, (self.showingModel || self.showingRectangles) ? 66 : 116, 252, 42);
+    self.shadowToggle.hidden = self.showingModel || self.showingRectangles;
 }
 
 - (void)toggleScene {
-    self.showingModel = !self.showingModel;
-    self.mapView.styleURL = self.showingModel
-                                ? [self modelStyleURL]
-                                : [self shadowStyleURLWithShadowEnabled:self.shadowEnabled];
-    CLLocationCoordinate2D center = self.showingModel
-                                        ? CLLocationCoordinate2DMake(48.8582621, 2.2944962)
-                                        : CLLocationCoordinate2DMake(52.5096, 13.3760);
+    if (self.showingModel) {
+        self.showingModel = NO;
+    } else if (!self.showingRectangles) {
+        self.showingRectangles = YES;
+    } else {
+        self.showingRectangles = NO;
+        self.showingModel = YES;
+    }
+    self.mapView.styleURL = self.showingModel ? [self modelStyleURL]
+                            : self.showingRectangles ? [self rectangleStyleURL]
+                                                     : [self shadowStyleURLWithShadowEnabled:self.shadowEnabled];
+    CLLocationCoordinate2D center = self.showingModel ? CLLocationCoordinate2DMake(48.8582621, 2.2944962)
+                                    : self.showingRectangles ? CLLocationCoordinate2DMake(48.8566, 2.3522)
+                                                             : CLLocationCoordinate2DMake(52.5096, 13.3760);
     self.mapView.camera = [MLNMapCamera cameraLookingAtCenterCoordinate:center
-                                                               altitude:self.showingModel ? 650 : 850
-                                                                  pitch:self.showingModel ? 62 : 52
-                                                                heading:self.showingModel ? 28 : 20];
+                                                               altitude:self.showingModel ? 650 : self.showingRectangles ? 1200000 : 850
+                                                                  pitch:self.showingModel ? 62 : self.showingRectangles ? 0 : 52
+                                                                heading:self.showingModel ? 28 : self.showingRectangles ? 0 : 20];
     [self updateSceneControls];
 }
 
@@ -104,6 +121,10 @@
     }
     if (![MLNGltfLayerPlugin registerPluginWithError:&registrationError]) {
         NSLog(@"Unable to register GLTF layer: %@", registrationError);
+        return NO;
+    }
+    if (![MLNRectangleLayerPlugin registerPluginWithError:&registrationError]) {
+        NSLog(@"Unable to register rectangle layer: %@", registrationError);
         return NO;
     }
 

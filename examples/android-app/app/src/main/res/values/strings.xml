@@ -5,4 +5,5 @@
     <string name="disable_shadows">Disable shadows</string>
     <string name="show_gltf">Show Eiffel Tower GLB</string>
     <string name="show_shadows">Show building shadows</string>
+    <string name="show_rectangles">Show rectangle layer</string>
 </resources>
