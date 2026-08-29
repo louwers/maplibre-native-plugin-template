@@ -39,12 +39,18 @@ void main() {
 #else
     float height = push.constant_height;
 #endif
+#if USE_BASE_ATTRIBUTE
+    float base = mix(a_base.x, a_base.y, push.base_t);
+#else
+    float base = push.constant_base;
+#endif
+    base = max(0.0, base);
     height = max(0.0, height);
     vec2 p1 = vec2(a_position_1) + unpack_float(a_decimals_edge_1.x / 2u) / 128.0;
     vec2 p2 = vec2(a_position_2) + unpack_float(a_decimals_edge_2.x / 2u) / 128.0;
     float upper = float(a_wall_vertex.y);
-    vec2 direction = vec2(-0.5, 0.5) * (-push.height_factor) * 0.38;
-    vec2 projected = (a_wall_vertex.x == 0 ? p1 : p2) + direction * height * upper;
+    vec2 direction = vec2(-0.5, -0.5) * (-push.height_factor) * 0.38;
+    vec2 projected = (a_wall_vertex.x == 0 ? p1 : p2) + direction * mix(base, height, upper);
     gl_Position = push.matrix * vec4(projected, 0.0, 1.0);
     gl_Position.y *= -1.0;
 }

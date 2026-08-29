@@ -36,8 +36,8 @@ void main() {
     float upper = mod(a_decimals_ed.x, 2.0);
     vec2 decimals = unpack_float(floor(a_decimals_ed.x / 2.0)) / 128.0;
     float tileUnitsPerMeter = -u_height_factor;
-    vec2 direction = vec2(-0.5, 0.5) * tileUnitsPerMeter * 0.38;
-    vec2 projected = a_pos + decimals + direction * height * upper;
+    vec2 direction = vec2(-0.5, -0.5) * tileUnitsPerMeter * 0.38;
+    vec2 projected = a_pos + decimals + direction * mix(base, height, upper);
     gl_Position = u_matrix * vec4(projected, 0.0, 1.0);
 }
 )glsl";

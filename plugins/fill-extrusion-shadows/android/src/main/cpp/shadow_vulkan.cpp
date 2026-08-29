@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cmath>
+
 #include "shaders/shadow_composite.frag.spv.inc"
 #include "shaders/shadow_composite.vert.spv.inc"
 #include "shaders/shadow_mask.frag.spv.inc"
@@ -106,6 +108,14 @@ struct ShadowPush {
 };
 
 static_assert(sizeof(ShadowPush) == 96);
+
+struct CompositePush {
+    float alpha;
+    float rotationCos;
+    float rotationSin;
+};
+
+static_assert(sizeof(CompositePush) == 12);
 
 struct PipelineEntry {
     mln_plugin_draw_packet_kind kind{};
@@ -358,7 +368,7 @@ bool createLayouts(VulkanResources& resources) {
         VK_SUCCESS) {
         return false;
     }
-    const VkPushConstantRange compositePush{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float)};
+    const VkPushConstantRange compositePush{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(CompositePush)};
     const VkPipelineLayoutCreateInfo compositeLayoutInfo{
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &resources.compositeSetLayout, 1, &compositePush};
     return resources.fn.createPipelineLayout(
@@ -905,12 +915,16 @@ mln_plugin_status shadowVulkanRender(ShadowInstance* instance, const mln_plugin_
                                        &resources.compositeSet,
                                        0,
                                        nullptr);
-    float alpha = 0.35f;
+    CompositePush push{};
+    push.alpha = 0.35f;
     if (frame->fill_extrusion_packet_count) {
-        alpha *= frame->fill_extrusion_packets[0].layer_opacity;
+        push.alpha *= frame->fill_extrusion_packets[0].layer_opacity;
     }
+    const float rotation = frame->backend->screen_pre_rotation_radians_clockwise;
+    push.rotationCos = std::cos(rotation);
+    push.rotationSin = std::sin(rotation);
     resources.fn.cmdPushConstants(
-        commandBuffer, resources.compositePipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(alpha), &alpha);
+        commandBuffer, resources.compositePipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push), &push);
     resources.fn.cmdDraw(commandBuffer, 3, 1, 0, 0);
     return MLN_PLUGIN_STATUS_OK;
 }

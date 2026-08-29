@@ -2,9 +2,12 @@ package org.maplibre.plugins.shadows.demo;
 
 import static org.junit.Assert.assertTrue;
 
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.SystemClock;
 
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Test;
@@ -15,12 +18,19 @@ import org.maplibre.plugins.shadows.FillExtrusionShadowsPlugin;
 @RunWith(AndroidJUnit4.class)
 public final class PluginSmokeTest {
   @Test
-  public void pluginRegistersRendersAndToggles() {
+  public void pluginRegistersRendersTogglesAndRotates() {
     FillExtrusionShadowsPlugin.register();
     assertTrue(MapLibrePluginRegistry.isRegistered(FillExtrusionShadowsPlugin.ID));
 
-    try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+    Intent intent = new Intent(ApplicationProvider.getApplicationContext(), MainActivity.class);
+    intent.putExtra("scene", "shadows");
+    try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(intent)) {
       waitForCallbackCountGreaterThan(0, 30_000);
+
+      long beforeRotation = FillExtrusionShadowsPlugin.renderCallbackCount();
+      scenario.onActivity(activity -> activity.setRequestedOrientation(
+          ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));
+      waitForCallbackCountGreaterThan(beforeRotation, 10_000);
 
       scenario.onActivity(activity -> activity.setShadowEnabledForTest(false));
       SystemClock.sleep(1_500);

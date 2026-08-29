@@ -2,6 +2,20 @@ load("@rules_apple//apple:apple.bzl", "apple_static_xcframework")
 load("@rules_apple//apple:versioning.bzl", "apple_bundle_version")
 load("@rules_cc//cc:defs.bzl", "objc_library")
 
+filegroup(
+    name = "render_test_data",
+    srcs = glob(
+        ["render-tests/**"],
+        exclude = [
+            "render-tests/**/actual.png",
+            "render-tests/**/diff.png",
+            "render-tests/cache.db",
+            "render-tests/results/**",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
 objc_library(
     name = "FillExtrusionShadows",
     srcs = [

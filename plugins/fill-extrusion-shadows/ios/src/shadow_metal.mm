@@ -23,6 +23,7 @@ struct ShadowUniforms {
     uint decimalsStride;
     uint baseStride;
     uint heightStride;
+    uint wallStride;
     uint baseAttribute;
     uint heightAttribute;
 };
@@ -61,11 +62,65 @@ vertex float4 fillExtrusionShadowVertex(
     const int packed = int(floor(float(rawDecimals.x) / 2.0f));
     const int first = packed / 256;
     const float2 decimals = float2(first, packed - first * 256) / 128.0f;
-    const float2 direction = float2(-0.5f, 0.5f) * (-u.heightFactor) * 0.38f;
-    // Metal exposes roof triangles and instanced walls separately. Every
-    // vertex in this triangle packet belongs to the roof, so it is projected
-    // by the evaluated extrusion height.
-    const float2 projected = float2(rawPosition) + decimals + direction * height;
+    const float upper = float(rawDecimals.x & 1u);
+    const float projectionHeight = mix(base, height, upper);
+    const float2 direction = float2(-0.5f, -0.5f) * (-u.heightFactor) * 0.38f;
+    const float2 projected = float2(rawPosition) + decimals + direction * projectionHeight;
+    return u.matrix * float4(projected, 0.0f, 1.0f);
+}
+
+vertex float4 fillExtrusionShadowWallVertex(
+    uint vertexID [[vertex_id]],
+    uint instanceID [[instance_id]],
+    const device uchar *wallBytes [[buffer(0)]],
+    const device uchar *positionBytes [[buffer(1)]],
+    const device uchar *decimalsBytes [[buffer(2)]],
+    const device uchar *baseBytes [[buffer(3)]],
+    const device uchar *heightBytes [[buffer(4)]],
+    constant ShadowUniforms &u [[buffer(5)]]) {
+    const short2 wallVertex = short2(*reinterpret_cast<const device packed_short2 *>(
+        wallBytes + vertexID * u.wallStride));
+    const short2 rawPosition1 = short2(*reinterpret_cast<const device packed_short2 *>(
+        positionBytes + instanceID * u.positionStride));
+    const short2 rawPosition2 = short2(*reinterpret_cast<const device packed_short2 *>(
+        positionBytes + (instanceID + 1u) * u.positionStride));
+    const ushort2 rawDecimals1 = ushort2(*reinterpret_cast<const device packed_ushort2 *>(
+        decimalsBytes + instanceID * u.decimalsStride));
+    const ushort2 rawDecimals2 = ushort2(*reinterpret_cast<const device packed_ushort2 *>(
+        decimalsBytes + (instanceID + 1u) * u.decimalsStride));
+    if ((rawDecimals1.x & 1u) != 0u) {
+        return float4(2.0f, 2.0f, 2.0f, 1.0f);
+    }
+
+    float base = u.constantBase;
+    if (u.baseAttribute == 1) {
+        base = *reinterpret_cast<const device float *>(baseBytes + instanceID * u.baseStride);
+    } else if (u.baseAttribute == 2) {
+        const float2 values = float2(*reinterpret_cast<const device packed_float2 *>(
+            baseBytes + instanceID * u.baseStride));
+        base = mix(values.x, values.y, u.baseT);
+    }
+    float height = u.constantHeight;
+    if (u.heightAttribute == 1) {
+        height = *reinterpret_cast<const device float *>(heightBytes + instanceID * u.heightStride);
+    } else if (u.heightAttribute == 2) {
+        const float2 values = float2(*reinterpret_cast<const device packed_float2 *>(
+            heightBytes + instanceID * u.heightStride));
+        height = mix(values.x, values.y, u.heightT);
+    }
+    base = max(0.0f, base);
+    height = max(0.0f, height);
+
+    const uint packed1 = rawDecimals1.x / 2u;
+    const uint packed2 = rawDecimals2.x / 2u;
+    const float2 decimals1 = float2(packed1 / 256u, packed1 % 256u) / 128.0f;
+    const float2 decimals2 = float2(packed2 / 256u, packed2 % 256u) / 128.0f;
+    const float2 position1 = float2(rawPosition1) + decimals1;
+    const float2 position2 = float2(rawPosition2) + decimals2;
+    const float upper = float(wallVertex.y);
+    const float projectionHeight = mix(base, height, upper);
+    const float2 direction = float2(-0.5f, -0.5f) * (-u.heightFactor) * 0.38f;
+    const float2 projected = (wallVertex.x == 0 ? position1 : position2) + direction * projectionHeight;
     return u.matrix * float4(projected, 0.0f, 1.0f);
 }
 
@@ -102,6 +157,7 @@ struct ShadowUniforms {
     uint32_t decimalsStride;
     uint32_t baseStride;
     uint32_t heightStride;
+    uint32_t wallStride;
     uint32_t baseAttribute;
     uint32_t heightAttribute;
 };
@@ -110,6 +166,7 @@ struct ShadowUniforms {
 
 @interface MLNShadowMetalResources : NSObject
 @property(nonatomic, strong) id<MTLRenderPipelineState> maskPipeline;
+@property(nonatomic, strong) id<MTLRenderPipelineState> wallMaskPipeline;
 @property(nonatomic, strong) id<MTLRenderPipelineState> compositePipeline;
 @property(nonatomic, strong) id<MTLDepthStencilState> depthStencil;
 @property(nonatomic, strong) id<MTLTexture> maskTexture;
@@ -147,7 +204,7 @@ bool ensureResources(ShadowInstance *instance,
     const auto depthFormat = static_cast<MTLPixelFormat>(metal->depth_pixel_format);
     const auto stencilFormat = static_cast<MTLPixelFormat>(metal->stencil_pixel_format);
     const NSUInteger sampleCount = std::max<uint32_t>(metal->sample_count, 1);
-    if (current.maskPipeline && current.compositePipeline && current.maskTexture &&
+    if (current.maskPipeline && current.wallMaskPipeline && current.compositePipeline && current.maskTexture &&
         current.colorFormat == colorFormat && current.depthFormat == depthFormat &&
         current.stencilFormat == stencilFormat && current.sampleCount == sampleCount &&
         current.width == width && current.height == height) {
@@ -162,10 +219,11 @@ bool ensureResources(ShadowInstance *instance,
         return false;
     }
     id<MTLFunction> maskVertex = [library newFunctionWithName:@"fillExtrusionShadowVertex"];
+    id<MTLFunction> wallMaskVertex = [library newFunctionWithName:@"fillExtrusionShadowWallVertex"];
     id<MTLFunction> maskFragment = [library newFunctionWithName:@"fillExtrusionShadowMaskFragment"];
     id<MTLFunction> compositeVertex = [library newFunctionWithName:@"fillExtrusionShadowCompositeVertex"];
     id<MTLFunction> compositeFragment = [library newFunctionWithName:@"fillExtrusionShadowCompositeFragment"];
-    if (!maskVertex || !maskFragment || !compositeVertex || !compositeFragment ||
+    if (!maskVertex || !wallMaskVertex || !maskFragment || !compositeVertex || !compositeFragment ||
         colorFormat == MTLPixelFormatInvalid || width == 0 || height == 0) {
         shadowLog(instance, 3, "Unable to load fill-extrusion shadow Metal shader functions");
         return false;
@@ -191,6 +249,15 @@ bool ensureResources(ShadowInstance *instance,
         [device newRenderPipelineStateWithDescriptor:maskDescriptor error:&error];
     if (!maskPipeline) {
         logError(instance, error, "Unable to create fill-extrusion shadow mask pipeline");
+        return false;
+    }
+
+    maskDescriptor.label = @"MapLibre fill-extrusion shadow wall mask";
+    maskDescriptor.vertexFunction = wallMaskVertex;
+    id<MTLRenderPipelineState> wallMaskPipeline =
+        [device newRenderPipelineStateWithDescriptor:maskDescriptor error:&error];
+    if (!wallMaskPipeline) {
+        logError(instance, error, "Unable to create fill-extrusion shadow wall mask pipeline");
         return false;
     }
 
@@ -241,6 +308,7 @@ bool ensureResources(ShadowInstance *instance,
         instance->metalResources = (__bridge_retained void *)current;
     }
     current.maskPipeline = maskPipeline;
+    current.wallMaskPipeline = wallMaskPipeline;
     current.compositePipeline = compositePipeline;
     current.depthStencil = [device newDepthStencilStateWithDescriptor:depthDescriptor];
     current.maskTexture = maskTexture;
@@ -258,17 +326,17 @@ id<MTLBuffer> buffer(uint64_t handle) {
 }
 
 void renderShadowGeometry(id<MTLRenderCommandEncoder> encoder,
-                          id<MTLRenderPipelineState> pipeline,
+                          MLNShadowMetalResources *state,
                           const mln_plugin_frame_context_v1 *frame) {
-    [encoder setRenderPipelineState:pipeline];
     [encoder setCullMode:MTLCullModeNone];
     [encoder setViewport:MTLViewport{0.0, 0.0, static_cast<double>(frame->width), static_cast<double>(frame->height), 0.0, 1.0}];
     [encoder setScissorRect:MTLScissorRect{0, 0, frame->width, frame->height}];
 
     for (size_t i = 0; i < frame->fill_extrusion_packet_count; ++i) {
         const auto &packet = frame->fill_extrusion_packets[i];
-        if (packet.kind != MLN_PLUGIN_DRAW_PACKET_TRIANGLES || !packet.index_buffer || !packet.position.buffer ||
-            !packet.decimals_edge.buffer) {
+        const bool wall = packet.kind == MLN_PLUGIN_DRAW_PACKET_INSTANCED_WALLS;
+        if ((packet.kind != MLN_PLUGIN_DRAW_PACKET_TRIANGLES && !wall) || !packet.index_buffer ||
+            !packet.position.buffer || !packet.decimals_edge.buffer || (wall && !packet.wall_vertex.buffer)) {
             continue;
         }
         id<MTLBuffer> position = buffer(packet.position.buffer);
@@ -296,22 +364,36 @@ void renderShadowGeometry(id<MTLRenderCommandEncoder> encoder,
         uniforms.decimalsStride = packet.decimals_edge.stride;
         uniforms.baseStride = baseAttribute ? packet.base.stride : packet.position.stride;
         uniforms.heightStride = heightAttribute ? packet.height.stride : packet.position.stride;
+        uniforms.wallStride = packet.wall_vertex.stride;
         uniforms.baseAttribute = !baseAttribute ? 0 : packet.base.type == MLN_PLUGIN_ATTRIBUTE_FLOAT ? 1 : 2;
         uniforms.heightAttribute = !heightAttribute ? 0 : packet.height.type == MLN_PLUGIN_ATTRIBUTE_FLOAT ? 1 : 2;
 
-        [encoder setVertexBuffer:position offset:packet.position.offset atIndex:0];
-        [encoder setVertexBuffer:decimals offset:packet.decimals_edge.offset atIndex:1];
-        [encoder setVertexBuffer:base offset:baseAttribute ? packet.base.offset : packet.position.offset atIndex:2];
-        [encoder setVertexBuffer:height
-                          offset:heightAttribute ? packet.height.offset : packet.position.offset
-                         atIndex:3];
-        [encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:4];
+        if (wall) {
+            [encoder setRenderPipelineState:state.wallMaskPipeline];
+            [encoder setVertexBuffer:buffer(packet.wall_vertex.buffer) offset:packet.wall_vertex.offset atIndex:0];
+            [encoder setVertexBuffer:position offset:packet.position.offset atIndex:1];
+            [encoder setVertexBuffer:decimals offset:packet.decimals_edge.offset atIndex:2];
+            [encoder setVertexBuffer:base offset:baseAttribute ? packet.base.offset : packet.position.offset atIndex:3];
+            [encoder setVertexBuffer:height
+                              offset:heightAttribute ? packet.height.offset : packet.position.offset
+                             atIndex:4];
+            [encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:5];
+        } else {
+            [encoder setRenderPipelineState:state.maskPipeline];
+            [encoder setVertexBuffer:position offset:packet.position.offset atIndex:0];
+            [encoder setVertexBuffer:decimals offset:packet.decimals_edge.offset atIndex:1];
+            [encoder setVertexBuffer:base offset:baseAttribute ? packet.base.offset : packet.position.offset atIndex:2];
+            [encoder setVertexBuffer:height
+                              offset:heightAttribute ? packet.height.offset : packet.position.offset
+                             atIndex:3];
+            [encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:4];
+        }
         [encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                             indexCount:packet.index_count
                              indexType:MTLIndexTypeUInt16
                            indexBuffer:index
                      indexBufferOffset:packet.index_offset
-                         instanceCount:1
+                         instanceCount:wall ? std::max<uint32_t>(packet.instance_count, 1u) : 1u
                             baseVertex:packet.base_vertex
                           baseInstance:0];
     }
@@ -338,7 +420,7 @@ mln_plugin_status shadowMetalPrepare(ShadowInstance *instance, const mln_plugin_
     id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
     if (!encoder) return MLN_PLUGIN_STATUS_CALLBACK_ERROR;
     [encoder pushDebugGroup:@"MapLibre fill-extrusion shadow union mask"];
-    renderShadowGeometry(encoder, state.maskPipeline, frame);
+    renderShadowGeometry(encoder, state, frame);
     [encoder popDebugGroup];
     [encoder endEncoding];
     return MLN_PLUGIN_STATUS_OK;

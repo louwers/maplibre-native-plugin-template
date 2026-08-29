@@ -33,6 +33,7 @@ cc_library(
 )
 
 plugin_render_test_data = [
+    "//plugins/fill-extrusion-shadows:render_test_data",
     "//plugins/gltf-layer:render_test_data",
     "//plugins/rectangle-layer:render_test_data",
 ]

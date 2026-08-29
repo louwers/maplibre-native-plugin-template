@@ -32,11 +32,17 @@ void main() {
 #else
     float height = push.constant_height;
 #endif
+#if USE_BASE_ATTRIBUTE
+    float base = mix(a_base.x, a_base.y, push.base_t);
+#else
+    float base = push.constant_base;
+#endif
+    base = max(0.0, base);
     height = max(0.0, height);
     float upper = float(a_decimals_edge.x & 1u);
     vec2 decimals = unpack_float(a_decimals_edge.x / 2u) / 128.0;
-    vec2 direction = vec2(-0.5, 0.5) * (-push.height_factor) * 0.38;
-    vec2 projected = vec2(a_position) + decimals + direction * height * upper;
+    vec2 direction = vec2(-0.5, -0.5) * (-push.height_factor) * 0.38;
+    vec2 projected = vec2(a_position) + decimals + direction * mix(base, height, upper);
     gl_Position = push.matrix * vec4(projected, 0.0, 1.0);
     gl_Position.y *= -1.0;
 }
