@@ -7,3 +7,8 @@ local.properties
 dependency-resolution/
 .DS_Store
 bazel-*
+plugins/*/render-tests/cache.db
+plugins/*/render-tests/results/*
+!plugins/*/render-tests/results/.gitkeep
+plugins/*/render-tests/**/actual.png
+plugins/*/render-tests/**/diff.png

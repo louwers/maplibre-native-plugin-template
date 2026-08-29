@@ -6,7 +6,6 @@ objc_library(
     name = "GltfLayer",
     srcs = [
         "ios/src/GltfLayer.mm",
-        "ios/src/gltf_metal.mm",
         "shared/cpp/gltf_layer.cpp",
     ],
     hdrs = [
@@ -17,9 +16,8 @@ objc_library(
         "-std=c++20",
         "-fobjc-arc",
         "-fvisibility=hidden",
-        "-DMLN_GLTF_PLUGIN_VERSION=$(plugin_version)",
+        "-DMLN_GLTF_PLUGIN_VERSION=\\\"$(plugin_version)\\\"",
     ],
-    defines = ["MLN_GLTF_IOS=1"],
     includes = [
         "ios/include",
         "shared/include",
@@ -27,7 +25,6 @@ objc_library(
     module_name = "GltfLayer",
     sdk_frameworks = [
         "Foundation",
-        "Metal",
     ],
     visibility = ["//visibility:public"],
     deps = [

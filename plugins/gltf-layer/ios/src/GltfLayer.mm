@@ -20,9 +20,4 @@ NSErrorDomain const MLNGltfLayerErrorDomain = @"org.maplibre.gltf-layer";
     return NO;
 }
 
-+ (uint64_t)prepareCallbackCount { return mln_gltf_layer_prepare_callback_count(); }
-+ (uint64_t)loadCallbackCount { return mln_gltf_layer_load_callback_count(); }
-+ (uint64_t)renderCallbackCount { return mln_gltf_layer_render_callback_count(); }
-+ (uint64_t)loadedVertexCount { return mln_gltf_layer_loaded_vertex_count(); }
-
 @end

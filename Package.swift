@@ -17,10 +17,21 @@ let package = Package(
             name: "GltfLayer",
             targets: ["GltfLayer"]
         ),
+        .library(
+            name: "RectangleLayer",
+            targets: ["RectangleLayer"]
+        ),
     ],
     targets: [
         .target(
+            name: "MapLibrePluginApi",
+            path: "MapLibrePluginApi",
+            sources: ["src/plugin_api_anchor.c"],
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "FillExtrusionShadows",
+            dependencies: ["MapLibrePluginApi"],
             path: "plugins/fill-extrusion-shadows",
             exclude: [
                 "BUILD.bazel",
@@ -55,7 +66,7 @@ let package = Package(
         ),
         .target(
             name: "GltfLayer",
-            dependencies: ["TinyGLTF"],
+            dependencies: ["MapLibrePluginApi", "TinyGLTF"],
             path: "plugins/gltf-layer",
             exclude: [
                 "BUILD.bazel",
@@ -64,18 +75,38 @@ let package = Package(
             ],
             sources: [
                 "ios/src/GltfLayer.mm",
-                "ios/src/gltf_metal.mm",
                 "shared/cpp/gltf_layer.cpp",
             ],
             publicHeadersPath: "ios/include",
             cxxSettings: [
                 .headerSearchPath("shared/include"),
-                .define("MLN_GLTF_IOS", to: "1"),
-                .define("MLN_GLTF_PLUGIN_VERSION", to: "0.1.0"),
+                .define("MLN_GLTF_PLUGIN_VERSION", to: "\"0.1.0\""),
             ],
             linkerSettings: [
                 .linkedFramework("Foundation"),
-                .linkedFramework("Metal"),
+            ]
+        ),
+        .target(
+            name: "RectangleLayer",
+            dependencies: ["MapLibrePluginApi"],
+            path: "plugins/rectangle-layer",
+            exclude: [
+                "BUILD.bazel",
+                "README.md",
+                "android",
+                "render-tests",
+            ],
+            sources: [
+                "ios/src/RectangleLayer.mm",
+                "shared/cpp/rectangle_layer.cpp",
+            ],
+            publicHeadersPath: "ios/include",
+            cxxSettings: [
+                .headerSearchPath("shared/include"),
+                .define("MLN_RECTANGLE_PLUGIN_VERSION", to: "\"0.1.0\""),
+            ],
+            linkerSettings: [
+                .linkedFramework("Foundation"),
             ]
         ),
     ],

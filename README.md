@@ -1,10 +1,12 @@
 # MapLibre Native plugin template
 
-This is an independent repository for native plugins that either extend existing MapLibre style layers or register new source-less layer types at runtime. It does not include or patch MapLibre Native source code.
+This is an independent repository for native plugins that either extend existing MapLibre style layers or register new source-bound layer types at runtime. It does not include or patch MapLibre Native source code.
 
 The first plugin, `plugins/fill-extrusion-shadows`, registers the constant paint property `fill-extrusion-shadow` for `fill-extrusion` layers and renders projected shadows using geometry borrowed from the host for the duration of each callback. Its implementation is split into `shared`, `android`, and `ios` source trees; platform wrappers do not duplicate descriptor or lifecycle code.
 
-`plugins/gltf-layer` registers the new style layer type `gltf`. It loads GLB data through MapLibre's file loader, parses static meshes with the pinned TinyGLTF submodule, and renders on Android OpenGL/Vulkan and iOS Metal. See its [style example](plugins/gltf-layer/README.md).
+`plugins/gltf-layer` registers the source-bound style layer type `gltf`. It loads GLB data through MapLibre's file loader during layout, parses static meshes with the pinned TinyGLTF submodule, and creates host-owned drawables using plugin-registered OpenGL, Vulkan, and Metal shaders. See its [style example](plugins/gltf-layer/README.md).
+
+`plugins/rectangle-layer` is the minimal source-bound example. Point features become screen-space rectangles with expression-capable fill, size, and stroke properties. Its render-test directory demonstrates how an independent plugin registers itself before delegating fixtures to MapLibre's standard render-test harness.
 
 ## Consume on Android with JitPack
 
@@ -29,6 +31,7 @@ dependencies {
     implementation("org.maplibre.gl:android-sdk-opengl:<plugin-enabled-maplibre-version>")
     implementation("com.github.louwers.maplibre-native-plugin-template:fill-extrusion-shadows:<version>")
     // or: implementation("com.github.louwers.maplibre-native-plugin-template:gltf-layer:<version>")
+    // or: implementation("com.github.louwers.maplibre-native-plugin-template:rectangle-layer:<version>")
 }
 ```
 
@@ -46,21 +49,25 @@ The selected MapLibre artifact must contain plugin ABI v1. The plugin POM does n
 
 ## Consume on iOS with Swift Package Manager
 
-Add `https://github.com/louwers/maplibre-native-plugin-template` as a package dependency and select the `FillExtrusionShadows` and/or `GltfLayer` product. Link it alongside a MapLibre build that contains plugin ABI v1, then register each plugin before constructing or loading a dependent style:
+Add `https://github.com/louwers/maplibre-native-plugin-template` as a package dependency and select the `FillExtrusionShadows`, `GltfLayer`, and/or `RectangleLayer` product. Link it alongside a MapLibre build that contains plugin ABI v1, then register each plugin before constructing or loading a dependent style:
 
 ```swift
 import FillExtrusionShadows
 import GltfLayer
+import RectangleLayer
 
 try FillExtrusionShadowsPlugin.registerPlugin()
 try GltfLayerPlugin.registerPlugin()
+try RectangleLayerPlugin.registerPlugin()
 ```
 
 Each GitHub release also includes a prebuilt `FillExtrusionShadows.xcframework.zip` for consumers that do not use Swift Package Manager.
 
+SwiftPM products share one header-only `MapLibrePluginApi` target. Release CI compares that packaged C header byte-for-byte with the selected MapLibre Native checkout, preventing a plugin release from compiling against a stale callback or struct layout.
+
 ## Build Android locally
 
-The Android plugin is independently buildable. It vendors the versioned pure-C ABI header and compiles its convenience property helper against MapLibre's public Java API without packaging a renderer:
+The Android plugins are independently buildable. Native compilation consumes the canonical pure-C header from MapLibre's `android-plugin-api` Prefab artifact without packaging a renderer:
 
 ```shell
 ./gradlew :plugins:fill-extrusion-shadows:assembleRelease \
@@ -74,7 +81,7 @@ The app under `examples/android-app` has OpenGL and Vulkan product flavors and u
 
 ## Build and run iOS with Bazel
 
-The iOS sample consumes the published `0.0.2` plugin XCFramework by checksum and the matching local MapLibre Native checkout through a Bazel `local_path_override`. From this repository:
+The iOS sample builds all three plugins from their shared sources and uses the matching local MapLibre Native checkout through a Bazel `local_path_override`. From this repository:
 
 ```shell
 bazel build --@maplibre//:renderer=metal \
@@ -82,7 +89,7 @@ bazel build --@maplibre//:renderer=metal \
   //examples/ios-app:FillExtrusionShadowsDemo
 ```
 
-Install `bazel-bin/examples/ios-app/FillExtrusionShadowsDemo_archive-root/Payload/FillExtrusionShadowsDemo.app` on a booted arm64 Simulator. The sample registers both C plugins before creating `MLNMapView`. Its scene switcher shows either the shadow-enabled Liberty style in Berlin or the remotely loaded Eiffel Tower GLB in Paris.
+Install `bazel-bin/examples/ios-app/FillExtrusionShadowsDemo_archive-root/Payload/FillExtrusionShadowsDemo.app` on a booted arm64 Simulator. The sample registers all plugins before creating `MLNMapView`. Its scene switcher shows the shadow-enabled Liberty style in Berlin, the remotely loaded Eiffel Tower GLB in Paris, and the source-bound rectangle layer. For deterministic launches, set `SIMCTL_CHILD_PLUGIN_SCENE` to `shadows`, `model`, or `rectangle` when invoking `xcrun simctl launch`.
 
 Validated output is checked in as `screenshots/ios-shadow-enabled.png` and `screenshots/ios-shadow-disabled.png`; the map viewport comparison changes 32,967 pixels along projected building footprints.
 

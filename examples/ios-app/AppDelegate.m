@@ -129,21 +129,25 @@
     }
 
     self.shadowEnabled = ![NSProcessInfo.processInfo.environment[@"SHADOW_ENABLED"] isEqualToString:@"0"];
-    self.showingModel = YES;
-    NSURL *styleURL = [self modelStyleURL];
+    NSString *initialScene = NSProcessInfo.processInfo.environment[@"PLUGIN_SCENE"] ?: @"model";
+    self.showingRectangles = [initialScene isEqualToString:@"rectangle"];
+    self.showingModel = !self.showingRectangles && ![initialScene isEqualToString:@"shadows"];
+    NSURL *styleURL = self.showingModel ? [self modelStyleURL]
+                       : self.showingRectangles ? [self rectangleStyleURL]
+                                                : [self shadowStyleURLWithShadowEnabled:self.shadowEnabled];
 
     self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
     UIViewController *controller = [[UIViewController alloc] init];
     self.mapView = [[MLNMapView alloc] initWithFrame:controller.view.bounds styleURL:styleURL];
     self.mapView.delegate = self;
     self.mapView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    CLLocationCoordinate2D initialCenter = self.showingModel
-                                               ? CLLocationCoordinate2DMake(48.8582621, 2.2944962)
-                                               : CLLocationCoordinate2DMake(52.5096, 13.3760);
+    CLLocationCoordinate2D initialCenter = self.showingModel ? CLLocationCoordinate2DMake(48.8582621, 2.2944962)
+                                             : self.showingRectangles ? CLLocationCoordinate2DMake(48.8566, 2.3522)
+                                                                      : CLLocationCoordinate2DMake(52.5096, 13.3760);
     self.mapView.camera = [MLNMapCamera cameraLookingAtCenterCoordinate:initialCenter
-                                                               altitude:self.showingModel ? 650 : 850
-                                                                  pitch:self.showingModel ? 62 : 52
-                                                                heading:self.showingModel ? 28 : 20];
+                                                               altitude:self.showingModel ? 650 : self.showingRectangles ? 1200000 : 850
+                                                                  pitch:self.showingModel ? 62 : self.showingRectangles ? 0 : 52
+                                                                heading:self.showingModel ? 28 : self.showingRectangles ? 0 : 20];
     [controller.view addSubview:self.mapView];
 
     self.shadowToggle = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -166,16 +170,6 @@
     [self updateSceneControls];
     self.window.rootViewController = controller;
     [self.window makeKeyAndVisible];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 8 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-      NSLog(@"FillExtrusionShadows render callback count: %llu",
-            [MLNFillExtrusionShadowsPlugin renderCallbackCount]);
-      NSLog(@"GLTF callbacks prepare=%llu load=%llu render=%llu vertices=%llu zoom=%.2f",
-            [MLNGltfLayerPlugin prepareCallbackCount],
-            [MLNGltfLayerPlugin loadCallbackCount],
-            [MLNGltfLayerPlugin renderCallbackCount],
-            [MLNGltfLayerPlugin loadedVertexCount],
-            self.mapView.zoomLevel);
-    });
     return YES;
 }
 

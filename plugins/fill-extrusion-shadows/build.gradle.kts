@@ -5,7 +5,8 @@ plugins {
     id("maven-publish")
 }
 
-val maplibreJavaApiVersion = providers.gradleProperty("maplibreJavaApiVersion").orElse("13.3.0")
+val maplibreVersion = providers.gradleProperty("maplibreVersion")
+val maplibreJavaApiVersion = providers.gradleProperty("maplibreJavaApiVersion")
 val pluginVersion = providers.gradleProperty("pluginVersion")
 val pluginGroup = providers.gradleProperty("pluginGroup").orElse("org.maplibre.plugins")
 val pluginAbis = providers.gradleProperty("maplibrePluginAbis").orNull
@@ -83,8 +84,9 @@ val generateVulkanShaders by tasks.registering(Exec::class) {
 }
 
 dependencies {
-    // Only the stable Java property type is needed at compile time. The C ABI
-    // header is vendored, and registration is discovered reflectively at runtime.
+    // The dedicated artifact supplies the canonical C ABI through Prefab
+    // without introducing a renderer library into the plugin AAR.
+    implementation("org.maplibre.gl:android-plugin-api:${maplibreVersion.get()}")
     maplibreJavaApi("org.maplibre.gl:android-sdk:${maplibreJavaApiVersion.get()}@aar")
     compileOnly(files(maplibreJavaClasses))
     compileOnly("androidx.annotation:annotation:1.8.2")

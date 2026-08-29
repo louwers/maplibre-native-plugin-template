@@ -4,20 +4,21 @@ Status: Android OpenGL/Vulkan and iOS Metal v1 implementations.
 
 ## Design goal
 
-A plugin can add typed constant properties and rendering behavior to an existing style-layer type, or register a new source-less style-layer type, without adding plugin-specific code to MapLibre Native. Core knows how to register generic descriptors, store generic property values, schedule lifecycle callbacks, expose short-lived geometry packets, and load plugin resources. It does not know that a shadow or GLTF plugin exists.
+A plugin can add typed properties and rendering behavior to an existing style-layer type, or register a new source-bound style-layer type, without adding plugin-specific code to MapLibre Native. Core knows how to register generic descriptors, store and evaluate generic property values, participate in source layout, own plugin drawables, register backend shaders, expose short-lived existing-layer geometry packets, and load plugin resources. It does not know that a shadow, GLTF, or rectangle plugin exists.
 
 Adding another plugin requires publishing a new plugin library. A core change is needed only when a future plugin category needs a genuinely new generic host capability, such as a geometry packet type not represented by v1.
 
 ## Boundary
 
-The public boundary is the pure-C header `mbgl/plugin/plugin_api.h`. The plugin keeps a matching copy of that versioned header so it can compile independently, while each Android renderer AAR exports the registration symbols from `libmaplibre.so`. The Android wrapper locates `MapLibrePluginRegistry` reflectively, obtains the registration function address, and invokes that typed C function pointer from JNI; this avoids a transitive renderer or companion-API dependency in the plugin POM. On iOS, `MLNPluginAPI.h` exposes the same types and registration symbol through the MapLibre framework. Neither platform boundary exposes MapLibre C++ classes, STL types, generated style-layer code, or renderer vtables.
+The public boundary is the pure-C header `mbgl/plugin/plugin_api.h`. Android plugins compile it from MapLibre's renderer-independent `android-plugin-api` Prefab artifact. Bazel plugins depend on MapLibre's `//:plugin-api` target, while an iOS framework exposes the same declarations through `MLNPluginAPI.h`. The Android wrapper locates `MapLibrePluginRegistry` reflectively, obtains the registration function address, and invokes that typed C function pointer from JNI. Neither platform boundary exposes MapLibre C++ classes, STL types, generated style-layer code, or renderer vtables.
 
 Core owns:
 
 - descriptor validation and process-wide registration;
 - generic constant paint/layout property parsing, storage, cloning, lookup, serialization, observer notification, and repaint scheduling;
-- source-less plugin layer creation through the common `LayerManager` fallback, without changing generated/platform factory maps;
-- camera snapshots and resource requests routed through MapLibre's `FileSource`;
+- source-bound plugin layer creation through the common `LayerManager` fallback, without changing generated/platform factory maps;
+- geometry-tile scheduling, per-feature expression evaluation, bucket validation, feature indexing, and drawable updates/removal;
+- shader registration for OpenGL, Vulkan, and Metal and resource requests routed through MapLibre's `FileSource`;
 - deterministic callback ordering and per-render-layer plugin instances;
 - backend context setup, graphics-state invalidation, failure isolation, and short-lived draw packets;
 - adapters that describe existing fill-extrusion buffers without copying or changing them.
@@ -25,13 +26,13 @@ Core owns:
 The plugin owns:
 
 - the property names and their interpretation;
-- all shaders, pipelines, framebuffer/mask resources, blend choices, and shadow mathematics;
+- extension shaders/pipelines/framebuffer resources and custom-layer shader source, vertex layouts, bucket data, and draw state;
 - Android convenience APIs and JNI registration;
 - resource recreation after resize/context loss and resource destruction.
 
 ## Registration and compatibility
 
-`mln_plugin_descriptor_v1` contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions and/or new layer-type declarations. An extension names an existing target type and callback priority. A layer-type declaration names the new style type, render stage, 3D behavior, properties, supported backends, and lifecycle callbacks.
+`mln_plugin_descriptor_v1` contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions and/or new layer-type declarations. An extension names an existing target type and callback priority. A layer-type declaration names the new style type, required source kind/geometries, render stage, 3D behavior, properties, supported backends, shaders, CPU layout callbacks, and optional feature-query callback.
 
 The v1 value types are boolean, float, float2, RGBA color, and length-aware UTF-8 string. Existing-layer extensions accept constant paint properties. New plugin layers accept constant paint and layout properties. Expressions, transitions, coercion, and data-driven plugin properties are rejected.
 
@@ -49,7 +50,7 @@ Plugin values are stored in a generic bag in immutable layer implementation stat
 
 Registration may occur on any thread. Applications should perform it on startup before constructing or loading a dependent style.
 
-`create_instance`, `prepare_frame`, the layer render callback, `context_lost`, and `destroy_instance` are called on the render thread. There is one instance per matching render layer. File-loader completion is delivered on the requesting render run loop. Response bytes are borrowed only during that callback; a plugin copies anything it retains. Host request IDs can be cancelled, and `request_repaint` marshals invalidation through the renderer observer.
+Existing-layer extension callbacks (`create_instance`, `prepare_frame`, `render_before_layer`, `context_lost`, and `destroy_instance`) are called on the render thread. There is one instance per matching render layer. Custom layer types do not receive backend contexts or issue render commands. Their `create_layout`, `layout_feature`, `finish_layout`, and `destroy_layout` callbacks run during geometry-tile layout and return copied CPU bucket data. Layout resource requests are completed through a dedicated FileSource run loop before CPU layout proceeds. Response bytes are borrowed only during the resource callback; a plugin copies anything it retains.
 
 Property snapshots, backend handles, command buffers, draw packets, and buffer handles are borrowed and valid only until the callback returns. The plugin may copy scalar values but must never retain a host graphics handle. Plugin-created GPU resources are owned by the plugin instance.
 
@@ -59,7 +60,7 @@ Callbacks return a status. On failure, core logs once, destroys and disables onl
 
 After drawable upload and before the main render pass, core calls `prepare_frame`. Immediately before the target layer group in its normal pass, core calls `render_before_layer`, placing a plugin composite beneath the unmodified base layer.
 
-A new source-less plugin layer gets an ordinary ordered layer group but no generated bucket or drawable. Its descriptor-selected callback runs at that group's exact position in the 3D, opaque, or translucent pass. The frame includes viewport/camera values, normalized-Mercator projection matrices, pixel ratio, Vulkan surface pre-rotation, and backend handles.
+A custom plugin layer must name a geometry source. MapLibre schedules its visible tiles, passes supported source features through CPU layout, validates and copies returned vertex/index/segment data, uploads it through ordinary buckets, and creates/removes drawables in the layer's ordered tile group. Each drawable names a registered shader and declares draw, depth, blend, stencil, and cull state. MapLibre supplies the per-tile matrix uniformly on OpenGL, Vulkan, and Metal. Direct custom-layer render callbacks are intentionally not part of the API.
 
 Fill-extrusion packets expose the already-uploaded index and semantic vertex buffers, tile matrix, evaluated constant values, interpolation factors, extrusion height conversion factor, and layer opacity. OpenGL exposes the ordinary triangle mesh. Vulkan exposes roof triangles and instanced walls separately. Plugins must use packet-declared offsets, strides, and attribute types and must not mutate buffer contents.
 
@@ -67,7 +68,7 @@ OpenGL callbacks may use GLES calls directly. Vulkan callbacks record only into 
 
 ## Android packaging
 
-MapLibre's canonical, OpenGL, and Vulkan AARs export the registration symbols and provide `MapLibrePluginRegistry`. The plugin vendors the ABI v1 C header and compiles its typed Java property helper against MapLibre's public Java API with `compileOnly`. Its wrapper discovers the registry reflectively, so neither MapLibre nor a companion API artifact appears in the plugin POM. The application chooses one renderer:
+MapLibre's canonical, OpenGL, and Vulkan AARs export the registration symbols and provide `MapLibrePluginRegistry`. The renderer-independent `android-plugin-api` AAR supplies only the Prefab C header/anchor and is safe as the plugin's compile dependency. Java convenience wrappers compile against MapLibre's public Java API with `compileOnly`. The application chooses one renderer:
 
 ```kotlin
 openglImplementation("org.maplibre.gl:android-sdk-opengl:<exact-version>")
@@ -94,9 +95,9 @@ Future properties (`-x`, `-y`, `-h-scale`, `-intensity`, and `-blur`) become add
 
 ## Worked example: GLTF layer
 
-The `gltf-layer` plugin registers source-less type `gltf` for Android OpenGL/Vulkan and iOS Metal. Its constant layout properties are `model-uri`, `model-position`, `model-altitude`, `model-heading`, and `model-scale`; `model-opacity` is a paint property. A model URI is requested through the host API, so MapLibre's cache, resource transform, online/offline policy, and error path remain authoritative.
+The `gltf-layer` plugin registers source-bound type `gltf` for Android OpenGL/Vulkan and iOS Metal. GeoJSON or vector-tile point features supply model anchors. Its layout properties are `model-uri`, `model-altitude`, `model-heading`, and `model-scale`; `model-opacity` is a paint property. A model URI is requested through the layout host API, so MapLibre's cache, resource transform, online/offline policy, and error path remain authoritative.
 
-The shared implementation parses GLB bytes with pinned TinyGLTF v2.9.7, flattens scene/node transforms into a backend-neutral vertex/index model, and maps glTF's Y-up meter coordinates into normalized Web Mercator at the requested longitude/latitude. Each backend owns only its vertex/index buffers, shaders, and pipeline. V1 renders static triangle meshes, base-color factors, alpha blending, and double-sided materials. Texture upload, animation, skinning, morph targets, compressed geometry, and terrain anchoring are explicitly deferred.
+The shared implementation parses GLB bytes with pinned TinyGLTF v2.9.7, flattens scene/node transforms, converts glTF's Y-up meter coordinates into tile x/y plus meter z at every point feature, and returns segmented 16-bit index buffers. MapLibre owns the vertex/index buffers, shaders, pipelines, drawable lifetime, ordering, visibility, and depth state. V1 renders static indexed triangle meshes and base-color factors. Texture upload, animation, skinning, morph targets, compressed geometry, and terrain anchoring are explicitly deferred.
 
 ## iOS and Metal
 

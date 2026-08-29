@@ -4,6 +4,7 @@ project(fill_extrusion_shadows LANGUAGES C CXX)
 if(NOT DEFINED MLN_SHADOW_PLUGIN_VERSION)
     set(MLN_SHADOW_PLUGIN_VERSION "0.1.0-local")
 endif()
+find_package(android-plugin-api REQUIRED CONFIG)
 
 add_library(fill-extrusion-shadows SHARED
     ../../../../shared/cpp/shadow_plugin.cpp
@@ -20,6 +21,7 @@ target_compile_definitions(fill-extrusion-shadows PRIVATE
     MLN_SHADOW_PLUGIN_VERSION="${MLN_SHADOW_PLUGIN_VERSION}"
 )
 target_link_libraries(fill-extrusion-shadows PRIVATE
+    android-plugin-api::plugin_api
     android
     log
     GLESv3

@@ -3,7 +3,7 @@ package org.maplibre.plugins.gltf;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-/** Registers the source-less {@code gltf} style layer with MapLibre Native. */
+/** Registers the source-bound, host-drawable {@code gltf} style layer with MapLibre Native. */
 public final class GltfLayerPlugin {
   public static final String ID = "org.maplibre.gltf-layer";
   public static final String LAYER_TYPE = "gltf";

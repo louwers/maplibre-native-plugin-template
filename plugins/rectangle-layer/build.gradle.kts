@@ -9,6 +9,7 @@ val pluginVersion = providers.gradleProperty("pluginVersion")
 val pluginGroup = providers.gradleProperty("pluginGroup").orElse("org.maplibre.plugins")
 val pluginAbis = providers.gradleProperty("maplibrePluginAbis").orNull
 val maplibreVersion = providers.gradleProperty("maplibreVersion")
+val maplibreJavaApiVersion = providers.gradleProperty("maplibreJavaApiVersion")
 
 // Java wrappers need MapLibre's layer/property types, but the renderer AAR must
 // not enter the native Prefab graph. Only android-plugin-api supplies native
@@ -65,7 +66,7 @@ android {
 
 dependencies {
     implementation("org.maplibre.gl:android-plugin-api:${maplibreVersion.get()}")
-    maplibreJavaApi("org.maplibre.gl:android-sdk:${maplibreVersion.get()}@aar")
+    maplibreJavaApi("org.maplibre.gl:android-sdk:${maplibreJavaApiVersion.get()}@aar")
     compileOnly(files(maplibreJavaClasses))
 }
 

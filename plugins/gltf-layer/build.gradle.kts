@@ -6,6 +6,7 @@ plugins {
 val pluginVersion = providers.gradleProperty("pluginVersion")
 val pluginGroup = providers.gradleProperty("pluginGroup").orElse("org.maplibre.plugins")
 val pluginAbis = providers.gradleProperty("maplibrePluginAbis").orNull
+val maplibreVersion = providers.gradleProperty("maplibreVersion")
 
 group = pluginGroup.get()
 version = pluginVersion.get()
@@ -38,6 +39,8 @@ android {
         }
     }
 
+    buildFeatures { prefab = true }
+
     sourceSets {
         getByName("main") {
             manifest.srcFile("android/src/main/AndroidManifest.xml")
@@ -49,13 +52,8 @@ android {
     publishing { singleVariant("release") { withSourcesJar() } }
 }
 
-val generateVulkanShaders by tasks.registering(Exec::class) {
-    group = "build"
-    description = "Regenerates the checked-in GLTF Vulkan SPIR-V"
-    val sdkRoot = providers.environmentVariable("ANDROID_HOME")
-        .orElse(providers.environmentVariable("ANDROID_SDK_ROOT"))
-    val ndkRoot = file("${sdkRoot.get()}/ndk/${android.ndkVersion}")
-    commandLine(file("android/src/main/cpp/shaders/generate_shaders.sh"), ndkRoot)
+dependencies {
+    implementation("org.maplibre.gl:android-plugin-api:${maplibreVersion.get()}")
 }
 
 publishing {

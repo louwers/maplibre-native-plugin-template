@@ -12,6 +12,7 @@ on:
         options:
           - fill-extrusion-shadows
           - gltf-layer
+          - rectangle-layer
       version:
         description: Semantic version, for example 0.0.1
         required: true
@@ -27,6 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check out plugin-enabled MapLibre Native
+        uses: actions/checkout@v4
+        with:
+          repository: louwers/maplibre-native
+          ref: cross-platform-plugin-api
+          path: maplibre-native
+          submodules: recursive
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -39,14 +48,29 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Verify and publish the C plugin API locally
+        run: |
+          diff -u \
+            maplibre-native/include/mbgl/plugin/plugin_api.h \
+            MapLibrePluginApi/include/mbgl/plugin/plugin_api.h
+          MAPLIBRE_VERSION="0.0.0-plugin-$(git -C maplibre-native rev-parse --short=12 HEAD)-SNAPSHOT"
+          echo "MAPLIBRE_VERSION=$MAPLIBRE_VERSION" >> "$GITHUB_ENV"
+          maplibre-native/platform/android/gradlew \
+            -p maplibre-native/platform/android \
+            :android-plugin-api:publishReleasePublicationToMavenLocal \
+            -PmaplibreVersion="$MAPLIBRE_VERSION" \
+            --stacktrace
+
       - name: Build Android plugin
         env:
           VERSION: ${{ inputs.version }}
-        run: >-
-          ./gradlew
-          :plugins:${{ inputs.plugin }}:assembleRelease
-          -PpluginVersion="$VERSION"
-          --stacktrace
+        run: |
+          MAPLIBRE_REPOSITORY_URL="file://${HOME}/.m2/repository" \
+            ./gradlew \
+            :plugins:${{ inputs.plugin }}:assembleRelease \
+            -PpluginVersion="$VERSION" \
+            -PmaplibreVersion="$MAPLIBRE_VERSION" \
+            --stacktrace
 
       - name: Stage release assets
         env:
@@ -83,6 +107,12 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
+
+      - name: Verify packaged C API header
+        run: >-
+          diff -u
+          maplibre-native/include/mbgl/plugin/plugin_api.h
+          MapLibrePluginApi/include/mbgl/plugin/plugin_api.h
 
       - name: Build iOS plugin
         env:

@@ -415,17 +415,17 @@ struct RectangleFragment {
     float4 stroke_color;
 };
 
-vertex RectangleFragment rectangleVertex(
-    RectangleVertex vertex [[stage_in]],
+RectangleFragment vertex rectangleVertex(
+    thread const RectangleVertex vertx [[stage_in]],
     device const uint32_t& uboIndex [[buffer(idGlobalUBOIndex)]],
     device const PluginDrawableUBO* drawables [[buffer(idDrawableReservedVertexOnlyUBO)]]) {
     device const PluginDrawableUBO& drawable = drawables[uboIndex];
-    float4 position = drawable.matrix * float4(float2(vertex.position), 0.0, 1.0);
-    position.xy += float2(vertex.corner) * vertex.size * 0.5 * drawable.extrude_scale * position.w;
-    return {position, float2(vertex.corner), vertex.size, vertex.color, vertex.stroke_width, vertex.stroke_color};
+    float4 position = drawable.matrix * float4(float2(vertx.position), 0.0, 1.0);
+    position.xy += float2(vertx.corner) * vertx.size * 0.5 * drawable.extrude_scale * position.w;
+    return {position, float2(vertx.corner), vertx.size, vertx.color, vertx.stroke_width, vertx.stroke_color};
 }
 
-fragment half4 rectangleFragment(RectangleFragment in [[stage_in]]) {
+half4 fragment rectangleFragment(RectangleFragment in [[stage_in]]) {
     float2 edgeDistance = (float2(1.0) - abs(in.corner)) * in.size * 0.5;
     return half4(min(edgeDistance.x, edgeDistance.y) < in.stroke_width ? in.stroke_color : in.color);
 }
