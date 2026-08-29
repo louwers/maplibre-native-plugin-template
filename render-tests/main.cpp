@@ -5,7 +5,7 @@
 #include "shadow_renderer.hpp"
 #endif
 
-#include <mbgl/render_test.hpp>
+#include <mln/render_test.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -112,7 +112,7 @@ int runManifest(const char* executable, const std::vector<std::string>& forwarde
     for (auto& argument : arguments) rawArguments.push_back(argument.data());
 
     std::cout << "\n=== Plugin render tests: " << manifest.parent_path().parent_path().filename().string() << " ===\n";
-    return mbgl::runRenderTests(static_cast<int>(rawArguments.size()), rawArguments.data(), {});
+    return mln::runRenderTests(static_cast<int>(rawArguments.size()), rawArguments.data(), {});
 }
 
 } // namespace

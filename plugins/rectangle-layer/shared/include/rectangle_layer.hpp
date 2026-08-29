@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mbgl/plugin/plugin_api.h>
+#include <mln/plugin/plugin_api.h>
 
 #include <stddef.h>
 #include <stdint.h>

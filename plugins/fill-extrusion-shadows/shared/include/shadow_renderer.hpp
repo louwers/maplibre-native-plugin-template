@@ -3,7 +3,7 @@
 #if __has_include(<MapLibre/MLNPluginAPI.h>)
 #include <MapLibre/MLNPluginAPI.h>
 #else
-#include <mbgl/plugin/plugin_api.h>
+#include <mln/plugin/plugin_api.h>
 #endif
 
 #include <stddef.h>
