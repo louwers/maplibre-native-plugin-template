@@ -3,13 +3,18 @@
 #include <mln/render_test.hpp>
 
 #include <algorithm>
+#include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <sys/wait.h>
+#include <unistd.h>
 
 namespace {
 
@@ -84,13 +89,20 @@ std::vector<fs::path> discoverManifests(const fs::path& root) {
     return manifests;
 }
 
-int runManifest(const char* executable, const std::vector<std::string>& forwarded, const fs::path& manifest) {
+std::vector<std::string> manifestArguments(const char* executable,
+                                           const std::vector<std::string>& forwarded,
+                                           const fs::path& manifest) {
     std::vector<std::string> arguments;
     arguments.reserve(forwarded.size() + 3);
     arguments.emplace_back(executable ? executable : "plugin-render-tests");
     arguments.insert(arguments.end(), forwarded.begin(), forwarded.end());
     arguments.emplace_back("--manifestPath");
     arguments.push_back(manifest.string());
+    return arguments;
+}
+
+int runManifest(const char* executable, const std::vector<std::string>& forwarded, const fs::path& manifest) {
+    auto arguments = manifestArguments(executable, forwarded, manifest);
 
     std::vector<char*> rawArguments;
     rawArguments.reserve(arguments.size());
@@ -98,6 +110,43 @@ int runManifest(const char* executable, const std::vector<std::string>& forwarde
 
     std::cout << "\n=== Plugin render tests: " << manifest.parent_path().parent_path().filename().string() << " ===\n";
     return mln::runRenderTests(static_cast<int>(rawArguments.size()), rawArguments.data(), {});
+}
+
+int runManifestProcess(const char* executable, const std::vector<std::string>& forwarded, const fs::path& manifest) {
+    auto arguments = manifestArguments(executable, forwarded, manifest);
+    std::vector<char*> rawArguments;
+    rawArguments.reserve(arguments.size() + 1);
+    for (auto& argument : arguments) rawArguments.push_back(argument.data());
+    rawArguments.push_back(nullptr);
+
+    std::cout << "Starting isolated plugin render suite: " << manifest.parent_path().parent_path().filename().string()
+              << '\n'
+              << std::flush;
+
+    const auto child = fork();
+    if (child < 0) {
+        std::cerr << "Unable to start render tests for " << manifest << ": " << std::strerror(errno) << '\n';
+        return 70;
+    }
+    if (child == 0) {
+        execvp(rawArguments.front(), rawArguments.data());
+        std::cerr << "Unable to execute " << rawArguments.front() << ": " << std::strerror(errno) << '\n';
+        _exit(127);
+    }
+
+    int status = 0;
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno == EINTR) continue;
+        std::cerr << "Unable to wait for render tests for " << manifest << ": " << std::strerror(errno) << '\n';
+        return 70;
+    }
+    if (WIFEXITED(status)) return WEXITSTATUS(status);
+    if (WIFSIGNALED(status)) {
+        std::cerr << "Render tests for " << manifest << " terminated by signal " << WTERMSIG(status) << '\n';
+        return 128 + WTERMSIG(status);
+    }
+    std::cerr << "Render tests for " << manifest << " ended with an unknown process status\n";
+    return 70;
 }
 
 } // namespace
@@ -163,7 +212,10 @@ int main(int argc, char** argv) {
 
     int result = 0;
     for (const auto& manifest : manifests) {
-        result = std::max(result, runManifest(argc > 0 ? argv[0] : nullptr, forwarded, manifest));
+        const auto manifestResult = explicitManifest
+                                        ? runManifest(argc > 0 ? argv[0] : nullptr, forwarded, manifest)
+                                        : runManifestProcess(argc > 0 ? argv[0] : nullptr, forwarded, manifest);
+        result = std::max(result, manifestResult);
     }
     return result;
 }
