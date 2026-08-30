@@ -10,14 +10,15 @@ Adding another plugin requires publishing a new plugin library. A core change is
 
 ## Boundary
 
-The public boundary is the pure-C header `mbgl/plugin/plugin_api.h`. Android plugins compile it from MapLibre's renderer-independent `android-plugin-api` Prefab artifact. Bazel plugins depend on MapLibre's `//:plugin-api` target, while an iOS framework exposes the same declarations through `MLNPluginAPI.h`. The Android wrapper locates `MapLibrePluginRegistry` reflectively, obtains the registration function address, and invokes that typed C function pointer from JNI. Neither platform boundary exposes MapLibre C++ classes, STL types, generated style-layer code, or renderer vtables.
+The public boundary is the pure-C header `mln/plugin/plugin_api.h`. Android plugins compile it from MapLibre's renderer-independent `android-plugin-api` Prefab artifact. Bazel plugins depend on MapLibre's `//:plugin-api` target, while an iOS framework exposes the same declarations through `MLNPluginAPI.h`. The Android wrapper locates `MapLibrePluginRegistry` reflectively, obtains the registration function address, and invokes that typed C function pointer from JNI. Neither platform boundary exposes MapLibre C++ classes, STL types, generated style-layer code, or renderer vtables.
 
 Core owns:
 
 - descriptor validation and process-wide registration;
-- generic constant paint/layout property parsing, storage, cloning, lookup, serialization, observer notification, and repaint scheduling;
+- generic typed paint/layout property parsing, expression evaluation, constraint validation, storage, cloning, lookup, serialization, observer notification, and repaint scheduling;
 - source-bound plugin layer creation through the common `LayerManager` fallback, without changing generated/platform factory maps;
-- geometry-tile scheduling, per-feature expression evaluation, bucket validation, feature indexing, and drawable updates/removal;
+- geometry- and RasterDEM-tile scheduling, per-feature/camera expression evaluation, bucket validation, feature indexing, and drawable updates/removal;
+- host-owned render targets, pass ordering, DEM textures, tile masks, shader uniform buffers, and texture bindings for declarative render graphs;
 - shader registration for OpenGL, Vulkan, and Metal and resource requests routed through MapLibre's `FileSource`;
 - deterministic callback ordering and per-render-layer plugin instances;
 - backend context setup, graphics-state invalidation, failure isolation, and short-lived draw packets;
@@ -26,15 +27,15 @@ Core owns:
 The plugin owns:
 
 - the property names and their interpretation;
-- extension shaders/pipelines/framebuffer resources and custom-layer shader source, vertex layouts, bucket data, and draw state;
+- extension shaders/pipelines/framebuffer resources and custom-layer shader source, declared uniform/texture resources, vertex layouts, bucket data, render graphs, and draw state;
 - Android convenience APIs and JNI registration;
 - resource recreation after resize/context loss and resource destruction.
 
 ## Registration and compatibility
 
-`mln_plugin_descriptor_v1` contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions and/or new layer-type declarations. An extension names an existing target type and callback priority. A layer-type declaration names the new style type, required source kind/geometries, render stage, 3D behavior, properties, supported backends, shaders, CPU layout callbacks, and optional feature-query callback.
+`mln_plugin_descriptor_v1` contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions and/or new layer-type declarations. An extension names an existing target type and callback priority. A layer-type declaration names the new style type, required source kind, render stage, 3D behavior, properties, supported backends, shaders, and either geometry-layout callbacks or a RasterDEM render graph.
 
-The v1 value types are boolean, float, float2, RGBA color, and length-aware UTF-8 string. Existing-layer extensions accept constant paint properties. New plugin layers accept constant paint and layout properties. Expressions, transitions, coercion, and data-driven plugin properties are rejected.
+The v1 value types are boolean, float, float2, RGBA color, length-aware UTF-8 string, float array, and color array. Descriptors can allow expressions and scalar authoring for array values, constrain numeric ranges/array lengths, and enumerate valid strings. Core evaluates camera expressions on the render thread and data-driven expressions during geometry layout. Transitions and coercion remain outside the current host implementation.
 
 `mln_plugin_register_v1` copies strings, property metadata, and defaults into core-owned storage. The native library continues to own callback code and must stay loaded for the process lifetime. Unloading and unregistering are intentionally unsupported.
 
@@ -60,7 +61,11 @@ Callbacks return a status. On failure, core logs once, destroys and disables onl
 
 After drawable upload and before the main render pass, core calls `prepare_frame`. Immediately before the target layer group in its normal pass, core calls `render_before_layer`, placing a plugin composite beneath the unmodified base layer.
 
-A custom plugin layer must name a geometry source. MapLibre schedules its visible tiles, passes supported source features through CPU layout, validates and copies returned vertex/index/segment data, uploads it through ordinary buckets, and creates/removes drawables in the layer's ordered tile group. Each drawable names a registered shader and declares draw, depth, blend, stencil, and cull state. MapLibre supplies the per-tile matrix uniformly on OpenGL, Vulkan, and Metal. Direct custom-layer render callbacks are intentionally not part of the API.
+A geometry plugin layer names a GeoJSON/vector source. MapLibre schedules its visible tiles, passes supported source features through CPU layout, validates and copies returned vertex/index/segment data, uploads it through ordinary buckets, and creates/removes drawables in the layer's ordered tile group. Each drawable names a registered shader and declares draw, depth, blend, stencil, and cull state. Direct custom-layer render callbacks are intentionally not part of the API.
+
+Every plugin shader explicitly declares its attributes, uniform blocks, textures, stages, and resource scopes. Core assigns backend bindings and injects numeric binding macros into GLSL/MSL. The plugin fills host-owned uniform blocks through `update_uniform_block`; the callback receives tile matrices, camera state, evaluated property snapshots, and RasterDEM metadata. There is no implicit plugin uniform layout.
+
+A RasterDEM plugin layer instead supplies a declarative, topologically ordered render graph. A pass selects host full-tile or tile-mask geometry, a registered shader, an optional host render target, texture inputs, and ordinary draw/depth/blend/stencil/cull state. Core owns DEM upload, offscreen textures, render-target layer groups, masked final drawables, resize/context replacement, and drawable removal. Render-target outputs may feed later passes without exposing backend commands or C++ renderer objects to the plugin.
 
 Fill-extrusion packets expose the already-uploaded index and semantic vertex buffers, tile matrix, evaluated constant values, interpolation factors, extrusion height conversion factor, and layer opacity. OpenGL exposes the ordinary triangle mesh. Vulkan exposes roof triangles and instanced walls separately. Plugins must use packet-declared offsets, strides, and attribute types and must not mutate buffer contents.
 
@@ -98,6 +103,12 @@ Future properties (`-x`, `-y`, `-h-scale`, `-intensity`, and `-blur`) become add
 The `gltf-layer` plugin registers source-bound type `gltf` for Android OpenGL/Vulkan and iOS Metal. GeoJSON or vector-tile point features supply model anchors. Its layout properties are `model-uri`, `model-altitude`, `model-heading`, and `model-scale`; `model-opacity` is a paint property. A model URI is requested through the layout host API, so MapLibre's cache, resource transform, online/offline policy, and error path remain authoritative.
 
 The shared implementation parses GLB bytes with pinned TinyGLTF v2.9.7, flattens scene/node transforms, converts glTF's Y-up meter coordinates into tile x/y plus meter z at every point feature, and returns segmented 16-bit index buffers. MapLibre owns the vertex/index buffers, shaders, pipelines, drawable lifetime, ordering, visibility, and depth state. V1 renders static indexed triangle meshes and base-color factors. Texture upload, animation, skinning, morph targets, compressed geometry, and terrain anchoring are explicitly deferred.
+
+## Worked example: hillshade layer
+
+The `hillshade-layer` plugin registers source-bound RasterDEM type `org.maplibre.hillshade` while the built-in `hillshade` implementation remains available. Its first graph pass samples the host DEM texture over full-tile geometry and writes encoded derivatives into a host RGBA8 tile-sized render target. Its second pass samples that target over the host's DEM tile-mask geometry and blends into the map in the translucent/3D ordering used by built-in hillshade.
+
+The plugin declares the built-in hillshade paint surface, including scalar-or-array illumination directions/altitudes and highlight/shadow colors, enum-constrained method/anchor values, numeric limits, and camera expressions. Its uniform callback produces the same prepare, tile, and evaluated data used by the built-in OpenGL, Vulkan, and Metal shaders. Plugin-owned render tests contain the complete built-in hillshade fixture set with only the style-layer type changed; offline DEM/raster data and platform-specific expectations live with the plugin.
 
 ## iOS and Metal
 

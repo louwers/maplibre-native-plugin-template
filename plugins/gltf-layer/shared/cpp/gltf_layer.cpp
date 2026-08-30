@@ -460,13 +460,15 @@ constexpr char vkVertex[] = R"SHADER(
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
 layout(location = 2) in vec4 a_color;
-layout(push_constant) uniform Constants { int ubo_index; } constant;
-struct PluginDrawableUBO { mat4 matrix; vec2 extrude_scale; vec2 pad; };
-layout(std140, set = LAYER_SET_INDEX, binding = idDrawableReservedVertexOnlyUBO) readonly buffer PluginDrawableUBOVector { PluginDrawableUBO values[]; } drawables;
+layout(std140, set = DRAWABLE_UBO_SET_INDEX, binding = MLN_PLUGIN_UNIFORM_0_BINDING) uniform PluginDrawableUBO {
+    mat4 matrix;
+    vec2 extrude_scale;
+    vec2 pad;
+} drawable;
 layout(location = 0) out vec3 v_normal;
 layout(location = 1) out vec4 v_color;
 void main() {
-    gl_Position = drawables.values[constant.ubo_index].matrix * vec4(a_position, 1.0);
+    gl_Position = drawable.matrix * vec4(a_position, 1.0);
     applySurfaceTransform(); v_normal = a_normal; v_color = a_color;
 }
 )SHADER";
@@ -486,10 +488,9 @@ struct alignas(16) PluginDrawableUBO { float4x4 matrix; float2 extrude_scale; fl
 struct GltfVertex { float3 position [[attribute(0)]]; float3 normal [[attribute(1)]]; float4 color [[attribute(2)]]; };
 struct GltfFragment { float4 position [[position, invariant]]; float3 normal; float4 color; };
 GltfFragment vertex gltfVertex(thread const GltfVertex vertx [[stage_in]],
-    device const uint32_t& uboIndex [[buffer(idGlobalUBOIndex)]],
-    device const PluginDrawableUBO* drawables [[buffer(idDrawableReservedVertexOnlyUBO)]]) {
+    device const PluginDrawableUBO& drawable [[buffer(MLN_PLUGIN_UNIFORM_0_BINDING)]]) {
     return {
-        .position = drawables[uboIndex].matrix * float4(vertx.position, 1.0),
+        .position = drawable.matrix * float4(vertx.position, 1.0),
         .normal = vertx.normal,
         .color = vertx.color
     };
@@ -500,6 +501,29 @@ half4 fragment gltfFragment(GltfFragment in [[stage_in]]) {
 }
 )SHADER";
 
+struct alignas(16) DrawableUBO {
+    float matrix[16];
+    float extrudeScale[2];
+    float padding[2];
+};
+static_assert(sizeof(DrawableUBO) == 80);
+
+mln_plugin_status updateUniform(const mln_plugin_uniform_context_v1* context,
+                                uint32_t uniformID,
+                                uint8_t* output,
+                                size_t outputSize) {
+    if (!context || context->struct_size < sizeof(*context) || !output || uniformID != 0 ||
+        outputSize != sizeof(DrawableUBO)) {
+        return MLN_PLUGIN_STATUS_INVALID_ARGUMENT;
+    }
+    DrawableUBO value{};
+    std::copy_n(context->tile_matrix, 16, value.matrix);
+    value.extrudeScale[0] = context->pixels_to_gl_units[0];
+    value.extrudeScale[1] = context->pixels_to_gl_units[1];
+    std::memcpy(output, &value, sizeof(value));
+    return MLN_PLUGIN_STATUS_OK;
+}
+
 constexpr mln_plugin_value makeFloat(float value) {
     mln_plugin_value result{}; result.struct_size = sizeof(result); result.type = MLN_PLUGIN_VALUE_FLOAT;
     result.data.float_value = value; return result;
@@ -509,11 +533,11 @@ constexpr mln_plugin_value makeString() {
 }
 
 const std::array<mln_plugin_property_descriptor_v1, 5> properties = {{
-    {sizeof(mln_plugin_property_descriptor_v1), str("model-uri"), MLN_PLUGIN_VALUE_STRING, MLN_PLUGIN_PROPERTY_LAYOUT, makeString(), 0, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("model-altitude"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_LAYOUT, makeFloat(0), 0, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("model-heading"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_LAYOUT, makeFloat(0), 0, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("model-scale"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_LAYOUT, makeFloat(1), 0, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("model-opacity"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(1), 0, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("model-uri"), MLN_PLUGIN_VALUE_STRING, MLN_PLUGIN_PROPERTY_LAYOUT, makeString(), 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("model-altitude"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_LAYOUT, makeFloat(0), 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("model-heading"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_LAYOUT, makeFloat(0), 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("model-scale"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_LAYOUT, makeFloat(1), 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("model-opacity"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(1), 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
 }};
 const std::array<mln_plugin_shader_attribute_v1, 3> shaderAttributes = {{
     {sizeof(mln_plugin_shader_attribute_v1), positionAttribute, 0, str("a_position"), MLN_PLUGIN_VERTEX_FLOAT_X3},
@@ -525,8 +549,25 @@ const std::array<mln_plugin_shader_source_v1, 3> shaderSources = {{
     {sizeof(mln_plugin_shader_source_v1), MLN_PLUGIN_BACKEND_VULKAN, str(vkVertex), str(vkFragment), {}, {}},
     {sizeof(mln_plugin_shader_source_v1), MLN_PLUGIN_BACKEND_METAL, str(metalSource), {}, str("gltfVertex"), str("gltfFragment")},
 }};
+const std::array<mln_plugin_uniform_block_descriptor_v1, 1> shaderUniforms = {{
+    {sizeof(mln_plugin_uniform_block_descriptor_v1),
+     0,
+     str("PluginDrawableUBO"),
+     sizeof(DrawableUBO),
+     MLN_PLUGIN_SHADER_STAGE_VERTEX,
+     MLN_PLUGIN_UNIFORM_SCOPE_DRAWABLE},
+}};
 const std::array<mln_plugin_shader_descriptor_v1, 1> shaders = {{
-    {sizeof(mln_plugin_shader_descriptor_v1), str("gltf"), shaderSources.data(), shaderSources.size(), shaderAttributes.data(), shaderAttributes.size()},
+    {sizeof(mln_plugin_shader_descriptor_v1),
+     str("gltf"),
+     shaderSources.data(),
+     shaderSources.size(),
+     shaderAttributes.data(),
+     shaderAttributes.size(),
+     shaderUniforms.data(),
+     shaderUniforms.size(),
+     nullptr,
+     0},
 }};
 
 const mln_plugin_layer_type_v1 layerType = [] {
@@ -546,6 +587,7 @@ const mln_plugin_layer_type_v1 layerType = [] {
     value.layout_feature = layoutFeature;
     value.finish_layout = finishLayout;
     value.destroy_layout = destroyLayout;
+    value.update_uniform_block = updateUniform;
     return value;
 }();
 

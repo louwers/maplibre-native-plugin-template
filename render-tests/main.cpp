@@ -1,4 +1,5 @@
 #include "gltf_layer.hpp"
+#include "hillshade_layer.hpp"
 #include "rectangle_layer.hpp"
 
 #if !defined(MLN_PLUGIN_RENDER_TEST_SKIP_SHADOWS)
@@ -30,6 +31,7 @@ struct PluginTestSuite {
 std::vector<PluginTestSuite> pluginTestSuites() {
     std::vector<PluginTestSuite> suites{
         {"gltf-layer", &mln_gltf_layer_register},
+        {"hillshade-layer", &mln_hillshade_layer_register},
         {"rectangle-layer", &mln_rectangle_layer_register},
     };
 #if !defined(MLN_PLUGIN_RENDER_TEST_SKIP_SHADOWS)

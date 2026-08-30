@@ -35,6 +35,7 @@ cc_library(
 plugin_render_test_data = [
     "//plugins/fill-extrusion-shadows:render_test_data",
     "//plugins/gltf-layer:render_test_data",
+    "//plugins/hillshade-layer:render_test_data",
     "//plugins/rectangle-layer:render_test_data",
 ]
 
@@ -50,6 +51,7 @@ cc_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//plugins/gltf-layer:gltf_core",
+        "//plugins/hillshade-layer:hillshade_core",
         "//plugins/rectangle-layer:rectangle_core",
         "@maplibre//render-test:render-test-srcs",
         "@maplibre//vendor:maplibre-native-base",
@@ -63,6 +65,7 @@ objc_library(
     deps = [
         "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
         "//plugins/gltf-layer:GltfLayer",
+        "//plugins/hillshade-layer:HillshadeLayer",
         "//plugins/rectangle-layer:RectangleLayer",
         "@maplibre//render-test:render-test-srcs",
         "@maplibre//vendor:maplibre-native-base",

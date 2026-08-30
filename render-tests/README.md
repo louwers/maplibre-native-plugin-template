@@ -36,4 +36,4 @@ The portable Linux OpenGL target is:
 bazel test //:render_tests
 ```
 
-Generated `cache.db`, `actual.png`, `diff.png`, and result HTML files are ignored. Generic `expected.png` baselines are committed next to their styles.
+Generated `cache.db`, `actual.png`, `diff.png`, and result HTML files are ignored. Generic `expected.png` baselines are committed next to their styles. A plugin whose fixtures need offline resources should commit a deliberately pruned database under a fixture-specific name (for example `fixtures.db`) and select it with `cache_path`.

@@ -12,6 +12,7 @@ on:
         options:
           - fill-extrusion-shadows
           - gltf-layer
+          - hillshade-layer
           - rectangle-layer
       version:
         description: Semantic version, for example 0.0.1

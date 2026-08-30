@@ -351,11 +351,11 @@ layout(location = 3) in vec4 a_color;
 layout(location = 4) in float a_stroke_width;
 layout(location = 5) in vec4 a_stroke_color;
 
-layout(push_constant) uniform Constants { int ubo_index; } constant;
-struct PluginDrawableUBO { mat4 matrix; vec2 extrude_scale; vec2 pad; };
-layout(std140, set = LAYER_SET_INDEX, binding = idDrawableReservedVertexOnlyUBO) readonly buffer PluginDrawableUBOVector {
-    PluginDrawableUBO values[];
-} drawables;
+layout(std140, set = DRAWABLE_UBO_SET_INDEX, binding = MLN_PLUGIN_UNIFORM_0_BINDING) uniform PluginDrawableUBO {
+    mat4 matrix;
+    vec2 extrude_scale;
+    vec2 pad;
+} drawable;
 
 layout(location = 0) out vec2 v_corner;
 layout(location = 1) out vec2 v_size;
@@ -364,7 +364,6 @@ layout(location = 3) out float v_stroke_width;
 layout(location = 4) out vec4 v_stroke_color;
 
 void main() {
-    PluginDrawableUBO drawable = drawables.values[constant.ubo_index];
     gl_Position = drawable.matrix * vec4(a_position, 0.0, 1.0);
     gl_Position.xy += vec2(a_corner) * a_size * 0.5 * drawable.extrude_scale * gl_Position.w;
     applySurfaceTransform();
@@ -417,9 +416,7 @@ struct RectangleFragment {
 
 RectangleFragment vertex rectangleVertex(
     thread const RectangleVertex vertx [[stage_in]],
-    device const uint32_t& uboIndex [[buffer(idGlobalUBOIndex)]],
-    device const PluginDrawableUBO* drawables [[buffer(idDrawableReservedVertexOnlyUBO)]]) {
-    device const PluginDrawableUBO& drawable = drawables[uboIndex];
+    device const PluginDrawableUBO& drawable [[buffer(MLN_PLUGIN_UNIFORM_0_BINDING)]]) {
     float4 position = drawable.matrix * float4(float2(vertx.position), 0.0, 1.0);
     position.xy += float2(vertx.corner) * vertx.size * 0.5 * drawable.extrude_scale * position.w;
     return {position, float2(vertx.corner), vertx.size, vertx.color, vertx.stroke_width, vertx.stroke_color};
@@ -430,6 +427,29 @@ half4 fragment rectangleFragment(RectangleFragment in [[stage_in]]) {
     return half4(min(edgeDistance.x, edgeDistance.y) < in.stroke_width ? in.stroke_color : in.color);
 }
 )SHADER";
+
+struct alignas(16) DrawableUBO {
+    float matrix[16];
+    float extrudeScale[2];
+    float padding[2];
+};
+static_assert(sizeof(DrawableUBO) == 80);
+
+mln_plugin_status updateUniform(const mln_plugin_uniform_context_v1* context,
+                                uint32_t uniformID,
+                                uint8_t* output,
+                                size_t outputSize) {
+    if (!context || context->struct_size < sizeof(*context) || !output || uniformID != 0 ||
+        outputSize != sizeof(DrawableUBO)) {
+        return MLN_PLUGIN_STATUS_INVALID_ARGUMENT;
+    }
+    DrawableUBO value{};
+    std::copy_n(context->tile_matrix, 16, value.matrix);
+    value.extrudeScale[0] = context->pixels_to_gl_units[0];
+    value.extrudeScale[1] = context->pixels_to_gl_units[1];
+    std::memcpy(output, &value, sizeof(value));
+    return MLN_PLUGIN_STATUS_OK;
+}
 
 constexpr mln_plugin_value makeFloat(float value) {
     mln_plugin_value result{};
@@ -448,11 +468,11 @@ constexpr mln_plugin_value makeColor(float r, float g, float b, float a) {
 }
 
 const std::array<mln_plugin_property_descriptor_v1, 5> properties = {{
-    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-color"), MLN_PLUGIN_VALUE_COLOR, MLN_PLUGIN_PROPERTY_PAINT, makeColor(0, 0, 0, 1), 1, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-width"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(10), 1, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-height"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(10), 1, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-stroke-width"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(0), 1, 0},
-    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-stroke-color"), MLN_PLUGIN_VALUE_COLOR, MLN_PLUGIN_PROPERTY_PAINT, makeColor(0, 0, 0, 1), 1, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-color"), MLN_PLUGIN_VALUE_COLOR, MLN_PLUGIN_PROPERTY_PAINT, makeColor(0, 0, 0, 1), 1, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-width"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(10), 1, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-height"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(10), 1, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-stroke-width"), MLN_PLUGIN_VALUE_FLOAT, MLN_PLUGIN_PROPERTY_PAINT, makeFloat(0), 1, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
+    {sizeof(mln_plugin_property_descriptor_v1), str("rectangle-stroke-color"), MLN_PLUGIN_VALUE_COLOR, MLN_PLUGIN_PROPERTY_PAINT, makeColor(0, 0, 0, 1), 1, 0, 0, 0, 0, 0, 0, 0, nullptr, 0},
 }};
 
 const std::array<mln_plugin_shader_attribute_v1, 6> shaderAttributes = {{
@@ -470,8 +490,26 @@ const std::array<mln_plugin_shader_source_v1, 3> shaderSources = {{
     {sizeof(mln_plugin_shader_source_v1), MLN_PLUGIN_BACKEND_METAL, str(metalSource), {}, str("rectangleVertex"), str("rectangleFragment")},
 }};
 
+const std::array<mln_plugin_uniform_block_descriptor_v1, 1> shaderUniforms = {{
+    {sizeof(mln_plugin_uniform_block_descriptor_v1),
+     0,
+     str("PluginDrawableUBO"),
+     sizeof(DrawableUBO),
+     MLN_PLUGIN_SHADER_STAGE_VERTEX,
+     MLN_PLUGIN_UNIFORM_SCOPE_DRAWABLE},
+}};
+
 const std::array<mln_plugin_shader_descriptor_v1, 1> shaders = {{
-    {sizeof(mln_plugin_shader_descriptor_v1), str("rectangle"), shaderSources.data(), shaderSources.size(), shaderAttributes.data(), shaderAttributes.size()},
+    {sizeof(mln_plugin_shader_descriptor_v1),
+     str("rectangle"),
+     shaderSources.data(),
+     shaderSources.size(),
+     shaderAttributes.data(),
+     shaderAttributes.size(),
+     shaderUniforms.data(),
+     shaderUniforms.size(),
+     nullptr,
+     0},
 }};
 
 const mln_plugin_layer_type_v1 layerType = [] {
@@ -491,6 +529,7 @@ const mln_plugin_layer_type_v1 layerType = [] {
     value.finish_layout = finishLayout;
     value.destroy_layout = destroyLayout;
     value.query_feature = queryFeature;
+    value.update_uniform_block = updateUniform;
     return value;
 }();
 

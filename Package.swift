@@ -18,6 +18,10 @@ let package = Package(
             targets: ["GltfLayer"]
         ),
         .library(
+            name: "HillshadeLayer",
+            targets: ["HillshadeLayer"]
+        ),
+        .library(
             name: "RectangleLayer",
             targets: ["RectangleLayer"]
         ),
@@ -81,6 +85,29 @@ let package = Package(
             cxxSettings: [
                 .headerSearchPath("shared/include"),
                 .define("MLN_GLTF_PLUGIN_VERSION", to: "\"0.1.0\""),
+            ],
+            linkerSettings: [
+                .linkedFramework("Foundation"),
+            ]
+        ),
+        .target(
+            name: "HillshadeLayer",
+            dependencies: ["MapLibrePluginApi"],
+            path: "plugins/hillshade-layer",
+            exclude: [
+                "BUILD.bazel",
+                "README.md",
+                "android",
+                "render-tests",
+            ],
+            sources: [
+                "ios/src/HillshadeLayer.mm",
+                "shared/cpp/hillshade_layer.cpp",
+            ],
+            publicHeadersPath: "ios/include",
+            cxxSettings: [
+                .headerSearchPath("shared/include"),
+                .define("MLN_HILLSHADE_PLUGIN_VERSION", to: "\"0.1.0\""),
             ],
             linkerSettings: [
                 .linkedFramework("Foundation"),
