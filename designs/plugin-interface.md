@@ -71,6 +71,21 @@ Fill-extrusion packets expose the already-uploaded index and semantic vertex buf
 
 OpenGL callbacks may use GLES calls directly. Vulkan callbacks record only into the supplied command buffer/render-pass context and resolve Vulkan procedures through the host function. Metal callbacks receive borrowed Objective-C objects as opaque C pointers: device, queue, command buffer, and active render encoder, plus attachment formats and sample count. After a callback, the host invalidates backend state and rebinds its global resources; the Metal render pass explicitly resets its cached pipeline, buffer, depth/stencil, cull, and scissor state. No Vulkan C++ or Metal C++ types cross the ABI.
 
+## Current limitations after CustomDrawableLayer removal
+
+The C plugin interface replaces the source-bound, host-owned drawable use case, but it is not a compatibility implementation of the removed C++ `CustomDrawableLayer`. In particular, v1 does not provide:
+
+- source-less plugin layers, which applications previously used for transient overlays and debug geometry;
+- a mutable application-owned layer instance or per-frame drawable diff API for simulations, moving objects, and streaming data;
+- plugin image upload and texture binding on ordinary geometry-plugin drawables for icons, decals, or textured meshes;
+- host primitive generators for line tessellation, polygon triangulation, or screen-aligned symbols;
+- stable per-drawable or per-frame identity in uniform callbacks for independently animated objects and materials;
+- a generic Android or iOS constructor for an arbitrary registered plugin layer type, independent of style JSON and a source.
+
+`MLN_PLUGIN_SOURCE_NONE` and `MLN_PLUGIN_SOURCE_RASTER` remain reserved values and are rejected for new plugin layer declarations. A geometry plugin currently requires a GeoJSON or vector source; a render-graph plugin requires a RasterDEM source.
+
+Applications can use built-in fill, line, circle, or symbol layers with GeoJSON or `CustomGeometrySource` when those primitives suffice. Source-bound C plugins cover custom bucket/layout/shader behavior, existing-layer extensions cover effects such as fill-extrusion shadows, and the backend-direct `CustomLayer`/`MLNCustomStyleLayer` API remains available when direct OpenGL or Metal commands are required. New generic C host capabilities should be added for the gaps above only when a concrete cross-platform plugin needs them.
+
 ## Android packaging
 
 MapLibre's canonical, OpenGL, and Vulkan AARs export the registration symbols and provide `MapLibrePluginRegistry`. The renderer-independent `android-plugin-api` AAR supplies only the Prefab C header/anchor and is safe as the plugin's compile dependency. Java convenience wrappers compile against MapLibre's public Java API with `compileOnly`. The application chooses one renderer:

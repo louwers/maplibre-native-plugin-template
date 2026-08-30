@@ -118,3 +118,5 @@ bazel build --@maplibre//:renderer=metal //:render_tests_metal
 See [render-tests/README.md](render-tests/README.md) for filtering, rebaselining, and the portable Linux target. The same commands run in the `Plugin render tests` workflow.
 
 See [designs/plugin-interface.md](designs/plugin-interface.md) for the API contract and lifecycle. Each plugin has a `release.json`; the `Release plugin` workflow uses that metadata to build the selected Android AAR and iOS XCFramework without plugin-specific workflow branches.
+
+The C interface currently supports source-bound geometry layers, RasterDEM render graphs, and existing-layer extensions; it is not a source-compatible replacement for the removed C++ `CustomDrawableLayer`. See [Current limitations after CustomDrawableLayer removal](designs/plugin-interface.md#current-limitations-after-customdrawablelayer-removal) for the unsupported source-less, mutable-drawable, texture-upload, and programmatic-construction use cases and their current alternatives.
