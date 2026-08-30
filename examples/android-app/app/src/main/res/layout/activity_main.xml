@@ -1,30 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <org.maplibre.android.maps.MapView
-        android:id="@+id/map_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:background="@drawable/menu_background"
+    android:fillViewport="true">
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="32dp"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="52dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="36dp">
 
-        <Button
-            android:id="@+id/scene_toggle"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/gallery_eyebrow"
+            android:textAllCaps="true"
+            android:textColor="#7DD3FC"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/show_gltf" />
+            android:layout_marginTop="8dp"
+            android:text="@string/gallery_title"
+            android:textColor="#FFFFFF"
+            android:textSize="36sp"
+            android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/shadow_toggle"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/disable_shadows" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="24dp"
+            android:lineSpacingExtra="3dp"
+            android:text="@string/gallery_subtitle"
+            android:textColor="#B8C5D6"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/demo_shadows"
+            style="@style/DemoCard"
+            android:contentDescription="@string/shadows_title">
+            <TextView style="@style/DemoCardIcon" android:text="☀" />
+            <LinearLayout style="@style/DemoCardCopy">
+                <TextView style="@style/DemoCardTitle" android:text="@string/shadows_title" />
+                <TextView style="@style/DemoCardDescription" android:text="@string/shadows_description" />
+            </LinearLayout>
+            <TextView style="@style/DemoCardArrow" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/demo_gltf"
+            style="@style/DemoCard"
+            android:contentDescription="@string/gltf_title">
+            <TextView style="@style/DemoCardIcon" android:text="◇" />
+            <LinearLayout style="@style/DemoCardCopy">
+                <TextView style="@style/DemoCardTitle" android:text="@string/gltf_title" />
+                <TextView style="@style/DemoCardDescription" android:text="@string/gltf_description" />
+            </LinearLayout>
+            <TextView style="@style/DemoCardArrow" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/demo_rectangles"
+            style="@style/DemoCard"
+            android:contentDescription="@string/rectangles_title">
+            <TextView style="@style/DemoCardIcon" android:text="▣" />
+            <LinearLayout style="@style/DemoCardCopy">
+                <TextView style="@style/DemoCardTitle" android:text="@string/rectangles_title" />
+                <TextView style="@style/DemoCardDescription" android:text="@string/rectangles_description" />
+            </LinearLayout>
+            <TextView style="@style/DemoCardArrow" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/demo_heatmap"
+            style="@style/DemoCard"
+            android:contentDescription="@string/heatmap_title">
+            <TextView style="@style/DemoCardIcon" android:text="◎" />
+            <LinearLayout style="@style/DemoCardCopy">
+                <TextView style="@style/DemoCardTitle" android:text="@string/heatmap_title" />
+                <TextView style="@style/DemoCardDescription" android:text="@string/heatmap_description" />
+            </LinearLayout>
+            <TextView style="@style/DemoCardArrow" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center"
+            android:text="@string/gallery_footer"
+            android:textColor="#708197"
+            android:textSize="12sp" />
     </LinearLayout>
-</FrameLayout>
+</ScrollView>

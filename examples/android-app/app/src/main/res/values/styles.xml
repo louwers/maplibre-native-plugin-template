@@ -2,8 +2,66 @@
 <resources>
     <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#126E82</item>
+        <item name="android:colorAccent">#38BDF8</item>
+        <item name="android:navigationBarColor">#0B1220</item>
+        <item name="android:statusBarColor">#0B1220</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
-</resources>
 
+    <style name="DemoCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:background">@drawable/demo_card</item>
+        <item name="android:clickable">true</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">94dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingTop">15dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingBottom">15dp</item>
+    </style>
+
+    <style name="DemoCardIcon">
+        <item name="android:layout_width">46dp</item>
+        <item name="android:layout_height">46dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#7DD3FC</item>
+        <item name="android:textSize">28sp</item>
+    </style>
+
+    <style name="DemoCardCopy">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="DemoCardTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="DemoCardDescription">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:textColor">#AFC2D4</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="DemoCardArrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:text">›</item>
+        <item name="android:textColor">#7DD3FC</item>
+        <item name="android:textSize">32sp</item>
+    </style>
+</resources>

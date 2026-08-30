@@ -22,9 +22,8 @@ public final class PluginSmokeTest {
     FillExtrusionShadowsPlugin.register();
     assertTrue(MapLibrePluginRegistry.isRegistered(FillExtrusionShadowsPlugin.ID));
 
-    Intent intent = new Intent(ApplicationProvider.getApplicationContext(), MainActivity.class);
-    intent.putExtra("scene", "shadows");
-    try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(intent)) {
+    Intent intent = new Intent(ApplicationProvider.getApplicationContext(), ShadowDemoActivity.class);
+    try (ActivityScenario<ShadowDemoActivity> scenario = ActivityScenario.launch(intent)) {
       waitForCallbackCountGreaterThan(0, 30_000);
 
       long beforeRotation = FillExtrusionShadowsPlugin.renderCallbackCount();
