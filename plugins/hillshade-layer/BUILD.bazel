@@ -17,6 +17,28 @@ filegroup(
 )
 
 cc_library(
+    name = "render_test_plugin",
+    srcs = ["render-tests/register.cpp"],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":hillshade_core",
+        "//:render_test_registry",
+    ],
+)
+
+cc_library(
+    name = "render_test_plugin_metal",
+    srcs = ["render-tests/register.cpp"],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":HillshadeLayer",
+        "//:render_test_registry",
+    ],
+)
+
+cc_library(
     name = "hillshade_core",
     srcs = ["shared/cpp/hillshade_layer.cpp"],
     hdrs = [

@@ -32,28 +32,30 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
-plugin_render_test_data = [
-    "//plugins/fill-extrusion-shadows:render_test_data",
-    "//plugins/gltf-layer:render_test_data",
-    "//plugins/hillshade-layer:render_test_data",
-    "//plugins/rectangle-layer:render_test_data",
-]
-
 cc_test(
     name = "render_tests",
     srcs = ["render-tests/main.cpp"],
     copts = ["-std=c++20"],
-    data = ["MODULE.bazel"] + plugin_render_test_data,
+    data = [
+        "MODULE.bazel",
+        "//plugins:render_test_data",
+    ],
     tags = ["no-sandbox"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        "//plugins/fill-extrusion-shadows:shadow_core",
-        "//plugins/gltf-layer:gltf_core",
-        "//plugins/hillshade-layer:hillshade_core",
-        "//plugins/rectangle-layer:rectangle_core",
+        ":render_test_registry",
+        "//plugins:render_test_plugins",
         "@maplibre//render-test:render-test-srcs",
         "@maplibre//vendor:maplibre-native-base",
     ],
+)
+
+cc_library(
+    name = "render_test_registry",
+    hdrs = ["render-tests/plugin_registry.hpp"],
+    includes = ["render-tests"],
+    visibility = ["//visibility:public"],
+    deps = ["@maplibre//:plugin-api"],
 )
 
 objc_library(
@@ -61,10 +63,8 @@ objc_library(
     srcs = ["render-tests/main.cpp"],
     copts = ["-std=c++20"],
     deps = [
-        "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
-        "//plugins/gltf-layer:GltfLayer",
-        "//plugins/hillshade-layer:HillshadeLayer",
-        "//plugins/rectangle-layer:RectangleLayer",
+        ":render_test_registry",
+        "//plugins:render_test_plugins_metal",
         "@maplibre//render-test:render-test-srcs",
         "@maplibre//vendor:maplibre-native-base",
     ],

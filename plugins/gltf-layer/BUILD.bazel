@@ -18,6 +18,28 @@ filegroup(
 )
 
 cc_library(
+    name = "render_test_plugin",
+    srcs = ["render-tests/register.cpp"],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":gltf_core",
+        "//:render_test_registry",
+    ],
+)
+
+cc_library(
+    name = "render_test_plugin_metal",
+    srcs = ["render-tests/register.cpp"],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":GltfLayer",
+        "//:render_test_registry",
+    ],
+)
+
+cc_library(
     name = "gltf_core",
     srcs = ["shared/cpp/gltf_layer.cpp"],
     hdrs = ["shared/include/gltf_layer.hpp"],

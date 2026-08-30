@@ -475,7 +475,7 @@ float get_aspect(vec2 deriv) {
 }
 
 // MapLibre's legacy hillshade algorithm (Method 0: STANDARD)
-void standard_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
+void standard_hillshade(vec2 deriv) {
     float azimuth = props.azimuths.x + PI;
     float slope = atan(0.625 * length(deriv));
     float aspect = get_aspect(deriv);
@@ -497,7 +497,7 @@ void standard_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
 }
 
 // Basic directional hillshade (Method 4: BASIC)
-void basic_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
+void basic_hillshade(vec2 deriv) {
     deriv = deriv * tileProps.exaggeration * 2.0;
     float azimuth = props.azimuths.x + PI;
     float cos_az = cos(azimuth);
@@ -518,7 +518,7 @@ void basic_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
 }
 
 // Multidirectional hillshade (Method 3: MULTIDIRECTIONAL)
-void multidirectional_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
+void multidirectional_hillshade(vec2 deriv) {
     deriv = deriv * tileProps.exaggeration * 2.0;
     vec4 total_color = vec4(0, 0, 0, 0);
 
@@ -555,7 +555,7 @@ void multidirectional_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProp
 }
 
 // Combined shadow and highlight method (Method 1: COMBINED)
-void combined_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
+void combined_hillshade(vec2 deriv) {
     // Only supports one light source (index 0)
     deriv = deriv * tileProps.exaggeration * 2.0;
     float azimuth = props.azimuths.x + PI;
@@ -577,7 +577,7 @@ void combined_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
 }
 
 // Igor's shadow/highlight method (Method 2: IGOR)
-void igor_hillshade(vec2 deriv, const HillshadeTilePropsUBO tileProps) {
+void igor_hillshade(vec2 deriv) {
     // Only supports one light source (index 0)
     deriv = deriv * tileProps.exaggeration * 2.0;
     float aspect = get_aspect(deriv);
@@ -613,16 +613,16 @@ void main() {
 
     // Dispatch to the selected hillshade method
     if (tileProps.method == BASIC) {
-        basic_hillshade(deriv, tileProps);
+        basic_hillshade(deriv);
     } else if (tileProps.method == COMBINED) {
-        combined_hillshade(deriv, tileProps);
+        combined_hillshade(deriv);
     } else if (tileProps.method == IGOR) {
-        igor_hillshade(deriv, tileProps);
+        igor_hillshade(deriv);
     } else if (tileProps.method == MULTIDIRECTIONAL) {
-        multidirectional_hillshade(deriv, tileProps);
+        multidirectional_hillshade(deriv);
     } else {
         // Default to STANDARD
-        standard_hillshade(deriv, tileProps);
+        standard_hillshade(deriv);
     }
 }
 )MLNSHADER";

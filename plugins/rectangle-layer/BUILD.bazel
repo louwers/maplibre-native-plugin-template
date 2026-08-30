@@ -17,6 +17,28 @@ filegroup(
 )
 
 cc_library(
+    name = "render_test_plugin",
+    srcs = ["render-tests/register.cpp"],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":rectangle_core",
+        "//:render_test_registry",
+    ],
+)
+
+cc_library(
+    name = "render_test_plugin_metal",
+    srcs = ["render-tests/register.cpp"],
+    alwayslink = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":RectangleLayer",
+        "//:render_test_registry",
+    ],
+)
+
+cc_library(
     name = "rectangle_core",
     srcs = ["shared/cpp/rectangle_layer.cpp"],
     hdrs = ["shared/include/rectangle_layer.hpp"],

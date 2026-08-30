@@ -57,21 +57,21 @@ jobs:
       - name: Build ${{ matrix.backend }} runner
         run: cmake --build "build-${{ matrix.backend }}" --target plugin-render-tests
 
-      - name: Run fill-extrusion shadow render tests on ${{ matrix.backend }}
+      - name: Run all plugin manifests on ${{ matrix.backend }}
         run: |
           xvfb-run -a \
             "build-${{ matrix.backend }}/plugin-render-tests" \
-            --manifestPath "$GITHUB_WORKSPACE/plugins/fill-extrusion-shadows/render-tests/manifest.json"
+            --plugin-test-root "$GITHUB_WORKSPACE"
 
       - name: Upload render-test diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: fill-extrusion-shadows-${{ matrix.backend }}-diagnostics
+          name: plugin-${{ matrix.backend }}-diagnostics
           path: |
-            plugins/fill-extrusion-shadows/render-tests/results/manifest.html
-            plugins/fill-extrusion-shadows/render-tests/**/actual.png
-            plugins/fill-extrusion-shadows/render-tests/**/diff.png
+            plugins/*/render-tests/results/manifest.html
+            plugins/*/render-tests/**/actual.png
+            plugins/*/render-tests/**/diff.png
           if-no-files-found: ignore
 
   metal:

@@ -1,7 +1,4 @@
-#include "gltf_layer.hpp"
-#include "hillshade_layer.hpp"
-#include "rectangle_layer.hpp"
-#include "shadow_renderer.hpp"
+#include "plugin_registry.hpp"
 
 #include <mln/render_test.hpp>
 
@@ -17,23 +14,6 @@
 namespace {
 
 namespace fs = std::filesystem;
-
-using RegisterFunction = mln_plugin_status (*)(mln_plugin_register_function_v1, char*, size_t);
-
-struct PluginTestSuite {
-    std::string_view directory;
-    RegisterFunction registerPlugin;
-};
-
-std::vector<PluginTestSuite> pluginTestSuites() {
-    std::vector<PluginTestSuite> suites{
-        {"fill-extrusion-shadows", &mln_fill_extrusion_shadows_register},
-        {"gltf-layer", &mln_gltf_layer_register},
-        {"hillshade-layer", &mln_hillshade_layer_register},
-        {"rectangle-layer", &mln_rectangle_layer_register},
-    };
-    return suites;
-}
 
 bool isRepositoryRoot(const fs::path& path) {
     std::error_code error;
@@ -71,12 +51,17 @@ std::optional<fs::path> repositoryRoot(const std::optional<fs::path>& requested,
     return std::nullopt;
 }
 
-bool registerPlugins(const std::vector<PluginTestSuite>& suites) {
-    for (const auto& suite : suites) {
+bool registerPlugins() {
+    const auto& registrations = mln::plugin::test::pluginRegistrations();
+    if (registrations.empty()) {
+        std::cerr << "No render-test plugin registrations were linked into the runner.\n";
+        return false;
+    }
+    for (const auto& registration : registrations) {
         char error[512]{};
-        const auto status = suite.registerPlugin(&mln_plugin_register_v1, error, sizeof(error));
+        const auto status = registration.function(&mln_plugin_register_v1, error, sizeof(error));
         if (status != MLN_PLUGIN_STATUS_OK && status != MLN_PLUGIN_STATUS_ALREADY_REGISTERED) {
-            std::cerr << "Unable to register plugin for " << suite.directory << ": " << error << '\n';
+            std::cerr << "Unable to register plugin through " << registration.symbol << ": " << error << '\n';
             return false;
         }
     }
@@ -86,11 +71,14 @@ bool registerPlugins(const std::vector<PluginTestSuite>& suites) {
 std::vector<fs::path> discoverManifests(const fs::path& root) {
     std::vector<fs::path> manifests;
     std::error_code error;
-    const fs::directory_iterator end;
-    for (fs::directory_iterator plugin(root / "plugins", error); !error && plugin != end; plugin.increment(error)) {
-        if (!plugin->is_directory(error)) continue;
-        const auto manifest = plugin->path() / "render-tests" / "manifest.json";
-        if (fs::is_regular_file(manifest, error)) manifests.push_back(manifest.lexically_normal());
+    const fs::recursive_directory_iterator end;
+    for (fs::recursive_directory_iterator entry(root / "plugins", error); !error && entry != end;
+         entry.increment(error)) {
+        if (!entry->is_regular_file(error) || entry->path().filename() != "manifest.json" ||
+            entry->path().parent_path().filename() != "render-tests") {
+            continue;
+        }
+        manifests.push_back(entry->path().lexically_normal());
     }
     std::sort(manifests.begin(), manifests.end());
     return manifests;
@@ -147,8 +135,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    const auto suites = pluginTestSuites();
-    if (!registerPlugins(suites)) return 4;
+    if (!registerPlugins()) return 4;
 
     std::vector<fs::path> manifests;
     if (explicitManifest) {
@@ -158,7 +145,8 @@ int main(int argc, char** argv) {
     } else {
         const auto root = repositoryRoot(requestedRoot, argc > 0 ? argv[0] : nullptr);
         if (!root) {
-            std::cerr << "Unable to locate the plugin-template repository. Use --plugin-test-root <path>.\n";
+            std::cerr << "Unable to locate the plugin-template repository. Use "
+                         "--plugin-test-root <path>.\n";
             return 66;
         }
         manifests = discoverManifests(*root);
