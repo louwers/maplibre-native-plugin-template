@@ -1,5 +1,6 @@
 #include "shadow_renderer.hpp"
 
+#define GL_GLEXT_PROTOTYPES
 #include <GLES3/gl3.h>
 
 #include <stddef.h>

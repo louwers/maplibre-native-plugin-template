@@ -49,7 +49,7 @@ let package = Package(
             publicHeadersPath: "ios/include",
             cxxSettings: [
                 .headerSearchPath("shared/include"),
-                .define("MLN_SHADOW_IOS", to: "1"),
+                .define("MLN_SHADOW_METAL", to: "1"),
                 .define("MLN_SHADOW_PLUGIN_VERSION", to: "\"0.0.2\""),
             ],
             linkerSettings: [

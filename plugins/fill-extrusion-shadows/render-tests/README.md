@@ -9,3 +9,8 @@ through the repository-level runner:
 ./bazel-bin/render_tests_metal \
   --manifestPath plugins/fill-extrusion-shadows/render-tests/manifest.json
 ```
+
+The repository workflow also runs this manifest through the shared Linux
+OpenGL and headless Vulkan CMake runner. See
+[`render-tests/README.md`](../../../render-tests/README.md) for the equivalent
+local commands.

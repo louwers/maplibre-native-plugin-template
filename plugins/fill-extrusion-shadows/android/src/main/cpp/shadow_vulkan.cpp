@@ -791,29 +791,25 @@ bool ensureResources(ShadowInstance* instance, const mln_plugin_frame_context_v1
 }
 
 void bindPacket(VulkanResources& resources, VkCommandBuffer commandBuffer, const mln_plugin_draw_packet_v1& packet) {
-    VkBuffer buffers[7]{};
-    VkDeviceSize offsets[7]{};
-    uint32_t count = 0;
-    const auto add = [&](const mln_plugin_buffer_binding_v1& binding, uint64_t extraOffset = 0) {
-        buffers[count] = bufferHandle(binding.buffer);
-        offsets[count] = binding.offset + extraOffset;
-        ++count;
+    const auto bind = [&](uint32_t index, const mln_plugin_buffer_binding_v1& binding, uint64_t extraOffset = 0) {
+        const auto buffer = bufferHandle(binding.buffer);
+        const VkDeviceSize offset = binding.offset + extraOffset;
+        resources.fn.cmdBindVertexBuffers(commandBuffer, index, 1, &buffer, &offset);
     };
     if (packet.kind == MLN_PLUGIN_DRAW_PACKET_INSTANCED_WALLS) {
-        add(packet.wall_vertex);
-        add(packet.position);
-        add(packet.decimals_edge);
-        add(packet.position, packet.position.stride);
-        add(packet.decimals_edge, packet.decimals_edge.stride);
-        if (packet.base_is_attribute) add(packet.base);
-        if (packet.height_is_attribute) add(packet.height);
+        bind(0, packet.wall_vertex);
+        bind(1, packet.position);
+        bind(2, packet.decimals_edge);
+        bind(3, packet.position, packet.position.stride);
+        bind(4, packet.decimals_edge, packet.decimals_edge.stride);
+        if (packet.base_is_attribute) bind(5, packet.base);
+        if (packet.height_is_attribute) bind(6, packet.height);
     } else {
-        add(packet.position);
-        add(packet.decimals_edge);
-        if (packet.base_is_attribute) add(packet.base);
-        if (packet.height_is_attribute) add(packet.height);
+        bind(0, packet.position);
+        bind(1, packet.decimals_edge);
+        if (packet.base_is_attribute) bind(2, packet.base);
+        if (packet.height_is_attribute) bind(3, packet.height);
     }
-    resources.fn.cmdBindVertexBuffers(commandBuffer, 0, count, buffers, offsets);
 }
 
 ShadowPush pushFor(const mln_plugin_draw_packet_v1& packet) {

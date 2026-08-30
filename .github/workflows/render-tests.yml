@@ -10,6 +10,70 @@ permissions:
   contents: read
 
 jobs:
+  linux:
+    name: Shared ${{ matrix.backend }} runner
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - OpenGL
+          - Vulkan
+        include:
+          - backend: OpenGL
+            cmake_flag: MLN_WITH_OPENGL
+          - backend: Vulkan
+            cmake_flag: MLN_WITH_VULKAN
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check out plugin-enabled MapLibre Native
+        uses: actions/checkout@v4
+        with:
+          repository: louwers/maplibre-native
+          ref: cross-platform-plugin-api
+          path: maplibre-native
+          submodules: recursive
+
+      - name: Install renderer dependencies
+        run: maplibre-native/.github/scripts/install-linux-deps
+
+      - name: Configure ${{ matrix.backend }} runner
+        run: |
+          cmake \
+            -S . \
+            -B "build-${{ matrix.backend }}" \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DMAPLIBRE_NATIVE_SOURCE_DIR="$GITHUB_WORKSPACE/maplibre-native" \
+            -DMLN_WITH_X11=ON \
+            -DMLN_WITH_WAYLAND=OFF \
+            -D${{ matrix.cmake_flag }}=ON
+
+      - name: Build ${{ matrix.backend }} runner
+        run: cmake --build "build-${{ matrix.backend }}" --target plugin-render-tests
+
+      - name: Run fill-extrusion shadow render tests on ${{ matrix.backend }}
+        run: |
+          xvfb-run -a \
+            "build-${{ matrix.backend }}/plugin-render-tests" \
+            --manifestPath "$GITHUB_WORKSPACE/plugins/fill-extrusion-shadows/render-tests/manifest.json"
+
+      - name: Upload render-test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fill-extrusion-shadows-${{ matrix.backend }}-diagnostics
+          path: |
+            plugins/fill-extrusion-shadows/render-tests/results/manifest.html
+            plugins/fill-extrusion-shadows/render-tests/**/actual.png
+            plugins/fill-extrusion-shadows/render-tests/**/diff.png
+          if-no-files-found: ignore
+
   metal:
     name: Shared Metal runner
     runs-on: macos-15

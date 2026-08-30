@@ -36,19 +36,21 @@ struct ShadowInstance {
 bool shadowEnabled(const mln_plugin_frame_context_v1* frame);
 void shadowLog(ShadowInstance* instance, int severity, const char* message);
 
-#if defined(MLN_SHADOW_ANDROID)
+#if defined(MLN_SHADOW_OPENGL)
 mln_plugin_status shadowOpenGLPrepare(ShadowInstance*, const mln_plugin_frame_context_v1*);
 mln_plugin_status shadowOpenGLRender(ShadowInstance*, const mln_plugin_frame_context_v1*);
 void shadowOpenGLContextLost(ShadowInstance*);
 void shadowOpenGLDestroy(ShadowInstance*);
+#endif
 
+#if defined(MLN_SHADOW_VULKAN)
 mln_plugin_status shadowVulkanPrepare(ShadowInstance*, const mln_plugin_frame_context_v1*);
 mln_plugin_status shadowVulkanRender(ShadowInstance*, const mln_plugin_frame_context_v1*);
 void shadowVulkanContextLost(ShadowInstance*);
 void shadowVulkanDestroy(ShadowInstance*);
 #endif
 
-#if defined(MLN_SHADOW_IOS)
+#if defined(MLN_SHADOW_METAL)
 mln_plugin_status shadowMetalPrepare(ShadowInstance*, const mln_plugin_frame_context_v1*);
 mln_plugin_status shadowMetalRender(ShadowInstance*, const mln_plugin_frame_context_v1*);
 void shadowMetalContextLost(ShadowInstance*);

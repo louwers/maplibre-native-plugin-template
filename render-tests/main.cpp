@@ -1,10 +1,7 @@
 #include "gltf_layer.hpp"
 #include "hillshade_layer.hpp"
 #include "rectangle_layer.hpp"
-
-#if !defined(MLN_PLUGIN_RENDER_TEST_SKIP_SHADOWS)
 #include "shadow_renderer.hpp"
-#endif
 
 #include <mln/render_test.hpp>
 
@@ -30,13 +27,11 @@ struct PluginTestSuite {
 
 std::vector<PluginTestSuite> pluginTestSuites() {
     std::vector<PluginTestSuite> suites{
+        {"fill-extrusion-shadows", &mln_fill_extrusion_shadows_register},
         {"gltf-layer", &mln_gltf_layer_register},
         {"hillshade-layer", &mln_hillshade_layer_register},
         {"rectangle-layer", &mln_rectangle_layer_register},
     };
-#if !defined(MLN_PLUGIN_RENDER_TEST_SKIP_SHADOWS)
-    suites.push_back({"fill-extrusion-shadows", &mln_fill_extrusion_shadows_register});
-#endif
     return suites;
 }
 

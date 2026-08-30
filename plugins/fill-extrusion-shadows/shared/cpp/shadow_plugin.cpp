@@ -31,10 +31,13 @@ mln_plugin_status createInstance(const mln_plugin_host_api_v1* host, mln_plugin_
 void destroyInstance(void* opaque) {
     auto* instance = static_cast<ShadowInstance*>(opaque);
     if (!instance) return;
-#if defined(MLN_SHADOW_ANDROID)
+#if defined(MLN_SHADOW_OPENGL)
     shadowOpenGLDestroy(instance);
+#endif
+#if defined(MLN_SHADOW_VULKAN)
     shadowVulkanDestroy(instance);
-#elif defined(MLN_SHADOW_IOS)
+#endif
+#if defined(MLN_SHADOW_METAL)
     shadowMetalDestroy(instance);
 #endif
     free(instance);
@@ -46,12 +49,15 @@ mln_plugin_status prepareFrame(void* opaque, const mln_plugin_frame_context_v1* 
     instance->lastBackend = frame->backend->backend;
     if (!shadowEnabled(frame)) return MLN_PLUGIN_STATUS_OK;
     switch (frame->backend->backend) {
-#if defined(MLN_SHADOW_ANDROID)
+#if defined(MLN_SHADOW_OPENGL)
         case MLN_PLUGIN_BACKEND_OPENGL:
             return shadowOpenGLPrepare(instance, frame);
+#endif
+#if defined(MLN_SHADOW_VULKAN)
         case MLN_PLUGIN_BACKEND_VULKAN:
             return shadowVulkanPrepare(instance, frame);
-#elif defined(MLN_SHADOW_IOS)
+#endif
+#if defined(MLN_SHADOW_METAL)
         case MLN_PLUGIN_BACKEND_METAL:
             return shadowMetalPrepare(instance, frame);
 #endif
@@ -69,14 +75,17 @@ mln_plugin_status renderBeforeLayer(void* opaque, const mln_plugin_frame_context
     instance->lastBackend = frame->backend->backend;
     auto status = MLN_PLUGIN_STATUS_OK;
     switch (frame->backend->backend) {
-#if defined(MLN_SHADOW_ANDROID)
+#if defined(MLN_SHADOW_OPENGL)
         case MLN_PLUGIN_BACKEND_OPENGL:
             status = shadowOpenGLRender(instance, frame);
             break;
+#endif
+#if defined(MLN_SHADOW_VULKAN)
         case MLN_PLUGIN_BACKEND_VULKAN:
             status = shadowVulkanRender(instance, frame);
             break;
-#elif defined(MLN_SHADOW_IOS)
+#endif
+#if defined(MLN_SHADOW_METAL)
         case MLN_PLUGIN_BACKEND_METAL:
             status = shadowMetalRender(instance, frame);
             break;
@@ -93,10 +102,13 @@ mln_plugin_status renderBeforeLayer(void* opaque, const mln_plugin_frame_context
 void contextLost(void* opaque) {
     auto* instance = static_cast<ShadowInstance*>(opaque);
     if (!instance) return;
-#if defined(MLN_SHADOW_ANDROID)
+#if defined(MLN_SHADOW_OPENGL)
     shadowOpenGLContextLost(instance);
+#endif
+#if defined(MLN_SHADOW_VULKAN)
     shadowVulkanContextLost(instance);
-#elif defined(MLN_SHADOW_IOS)
+#endif
+#if defined(MLN_SHADOW_METAL)
     shadowMetalContextLost(instance);
 #endif
 }
@@ -108,13 +120,19 @@ const mln_plugin_property_descriptor_v1 propertyDescriptor{
     MLN_PLUGIN_PROPERTY_PAINT,
     {sizeof(mln_plugin_value), MLN_PLUGIN_VALUE_BOOLEAN, {.boolean_value = 0}}};
 
-#if defined(MLN_SHADOW_ANDROID)
-constexpr uint32_t backendMask = MLN_PLUGIN_BACKEND_OPENGL | MLN_PLUGIN_BACKEND_VULKAN;
-#elif defined(MLN_SHADOW_IOS)
-constexpr uint32_t backendMask = MLN_PLUGIN_BACKEND_METAL;
-#else
-#error "Define MLN_SHADOW_ANDROID or MLN_SHADOW_IOS"
+constexpr uint32_t backendMask =
+#if defined(MLN_SHADOW_OPENGL)
+    MLN_PLUGIN_BACKEND_OPENGL |
 #endif
+#if defined(MLN_SHADOW_VULKAN)
+    MLN_PLUGIN_BACKEND_VULKAN |
+#endif
+#if defined(MLN_SHADOW_METAL)
+    MLN_PLUGIN_BACKEND_METAL |
+#endif
+    0u;
+
+static_assert(backendMask != 0, "Enable at least one fill-extrusion shadow backend");
 
 const mln_plugin_layer_extension_v1 layerExtension{sizeof(mln_plugin_layer_extension_v1),
                                                    pluginString(layerType, sizeof(layerType)),

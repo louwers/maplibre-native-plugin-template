@@ -42,14 +42,12 @@ plugin_render_test_data = [
 cc_test(
     name = "render_tests",
     srcs = ["render-tests/main.cpp"],
-    copts = [
-        "-std=c++20",
-        "-DMLN_PLUGIN_RENDER_TEST_SKIP_SHADOWS=1",
-    ],
+    copts = ["-std=c++20"],
     data = ["MODULE.bazel"] + plugin_render_test_data,
     tags = ["no-sandbox"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        "//plugins/fill-extrusion-shadows:shadow_core",
         "//plugins/gltf-layer:gltf_core",
         "//plugins/hillshade-layer:hillshade_core",
         "//plugins/rectangle-layer:rectangle_core",

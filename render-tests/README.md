@@ -30,10 +30,30 @@ List the discovered manifests without rendering:
 
 Arguments understood by MapLibre's runner, including `--filter`, `--online`, and `--update default`, are forwarded to every discovered manifest. Pass `--manifestPath <path>` to run only one plugin manifest.
 
-The portable Linux OpenGL target is:
+The portable Linux OpenGL Bazel target is:
 
 ```sh
 bazel test //:render_tests
+```
+
+CI exercises the fill-extrusion shadow fixtures with both Linux OpenGL and
+headless Vulkan. The CMake runner used by those jobs can be reproduced against
+a sibling MapLibre Native checkout with:
+
+```sh
+cmake -S . -B build-opengl -G Ninja \
+  -DMAPLIBRE_NATIVE_SOURCE_DIR="$PWD/../maplibre-native" \
+  -DMLN_WITH_OPENGL=ON -DMLN_WITH_X11=ON -DMLN_WITH_WAYLAND=OFF
+cmake --build build-opengl --target plugin-render-tests
+xvfb-run -a build-opengl/plugin-render-tests \
+  --manifestPath "$PWD/plugins/fill-extrusion-shadows/render-tests/manifest.json"
+
+cmake -S . -B build-vulkan -G Ninja \
+  -DMAPLIBRE_NATIVE_SOURCE_DIR="$PWD/../maplibre-native" \
+  -DMLN_WITH_VULKAN=ON -DMLN_WITH_X11=ON -DMLN_WITH_WAYLAND=OFF
+cmake --build build-vulkan --target plugin-render-tests
+build-vulkan/plugin-render-tests \
+  --manifestPath "$PWD/plugins/fill-extrusion-shadows/render-tests/manifest.json"
 ```
 
 Generated `cache.db`, `actual.png`, `diff.png`, and result HTML files are ignored. Generic `expected.png` baselines are committed next to their styles. A plugin whose fixtures need offline resources should commit a deliberately pruned database under a fixture-specific name (for example `fixtures.db`) and select it with `cache_path`.
