@@ -61,7 +61,8 @@ jobs:
         run: |
           xvfb-run -a \
             "build-${{ matrix.backend }}/plugin-render-tests" \
-            --plugin-test-root "$GITHUB_WORKSPACE"
+            --plugin-test-root "$GITHUB_WORKSPACE" \
+            --recycle-map
 
       - name: Upload render-test diagnostics
         if: failure()
@@ -110,7 +111,8 @@ jobs:
       - name: Run all plugin manifests
         run: |
           ./bazel-bin/render_tests_metal \
-            --plugin-test-root "$GITHUB_WORKSPACE"
+            --plugin-test-root "$GITHUB_WORKSPACE" \
+            --recycle-map
 
       - name: Upload render-test diagnostics
         if: failure()
