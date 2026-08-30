@@ -53,6 +53,7 @@ target_include_directories(
 target_link_libraries(plugin-render-tests PRIVATE mbgl-render-test)
 
 if(MLN_WITH_OPENGL)
+    find_package(OpenGL REQUIRED)
     target_sources(plugin-render-tests PRIVATE plugins/fill-extrusion-shadows/shared/cpp/shadow_opengl.cpp)
     target_compile_definitions(plugin-render-tests PRIVATE MLN_SHADOW_OPENGL=1)
     target_link_libraries(plugin-render-tests PRIVATE OpenGL::GL)
