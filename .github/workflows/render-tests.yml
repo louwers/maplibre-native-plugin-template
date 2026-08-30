@@ -111,3 +111,14 @@ jobs:
         run: |
           ./bazel-bin/render_tests_metal \
             --plugin-test-root "$GITHUB_WORKSPACE"
+
+      - name: Upload render-test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-Metal-diagnostics
+          path: |
+            plugins/*/render-tests/results/manifest.html
+            plugins/*/render-tests/**/actual.png
+            plugins/*/render-tests/**/diff.png
+          if-no-files-found: ignore
