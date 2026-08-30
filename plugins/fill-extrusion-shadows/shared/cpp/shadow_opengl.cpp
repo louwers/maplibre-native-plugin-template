@@ -24,9 +24,9 @@ uniform bool u_height_attribute;
 uniform float u_height_factor;
 
 vec2 unpack_float(float packedValue) {
-    int packed = int(packedValue);
-    int first = packed / 256;
-    return vec2(first, packed - first * 256);
+    int encoded = int(packedValue);
+    int first = encoded / 256;
+    return vec2(first, encoded - first * 256);
 }
 
 void main() {
