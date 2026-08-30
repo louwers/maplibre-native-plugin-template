@@ -10,6 +10,8 @@ The first plugin, `plugins/fill-extrusion-shadows`, registers the constant paint
 
 `plugins/hillshade-layer` registers the RasterDEM-backed type `org.maplibre.hillshade`. It reproduces the built-in hillshade layer through a host-owned two-pass render graph and explicit OpenGL, Vulkan, and Metal shader resources; the built-in `hillshade` type remains unchanged.
 
+`plugins/heatmap-layer` registers the geometry-backed type `org.maplibre.heatmap`. It reproduces the built-in heatmap layer with host-owned point buckets, a half-resolution floating-point render target, additive density rendering, and color-ramp compositing; the built-in `heatmap` type remains unchanged.
+
 ## Consume on Android with JitPack
 
 Choose exactly one plugin-enabled MapLibre renderer and add JitPack after your normal repositories:
@@ -35,6 +37,7 @@ dependencies {
     // or: implementation("com.github.louwers.maplibre-native-plugin-template:gltf-layer:<version>")
     // or: implementation("com.github.louwers.maplibre-native-plugin-template:rectangle-layer:<version>")
     // or: implementation("com.github.louwers.maplibre-native-plugin-template:hillshade-layer:<version>")
+    // or: implementation("com.github.louwers.maplibre-native-plugin-template:heatmap-layer:<version>")
 }
 ```
 
@@ -49,24 +52,29 @@ GltfLayerPlugin.register()
 
 // For a raster-dem style layer whose type is `org.maplibre.hillshade`:
 HillshadeLayerPlugin.register()
+
+// For a geometry style layer whose type is `org.maplibre.heatmap`:
+HeatmapLayerPlugin.register()
 ```
 
 The selected MapLibre artifact must contain plugin ABI v1. The plugin POM does not select a renderer transitively.
 
 ## Consume on iOS with Swift Package Manager
 
-Add `https://github.com/louwers/maplibre-native-plugin-template` as a package dependency and select the `FillExtrusionShadows`, `GltfLayer`, `HillshadeLayer`, and/or `RectangleLayer` product. Link it alongside a MapLibre build that contains plugin ABI v1, then register each plugin before constructing or loading a dependent style:
+Add `https://github.com/louwers/maplibre-native-plugin-template` as a package dependency and select the `FillExtrusionShadows`, `GltfLayer`, `HeatmapLayer`, `HillshadeLayer`, and/or `RectangleLayer` product. Link it alongside a MapLibre build that contains plugin ABI v1, then register each plugin before constructing or loading a dependent style:
 
 ```swift
 import FillExtrusionShadows
 import GltfLayer
 import RectangleLayer
 import HillshadeLayer
+import HeatmapLayer
 
 try FillExtrusionShadowsPlugin.registerPlugin()
 try GltfLayerPlugin.registerPlugin()
 try RectangleLayerPlugin.registerPlugin()
 try HillshadeLayerPlugin.registerPlugin()
+try HeatmapLayerPlugin.registerPlugin()
 ```
 
 Each GitHub release also includes a prebuilt XCFramework for its selected plugin for consumers that do not use Swift Package Manager.
@@ -85,6 +93,9 @@ The Android plugins are independently buildable. Native compilation consumes the
   -PpluginVersion=0.1.0
 
 ./gradlew :plugins:hillshade-layer:assembleRelease \
+  -PpluginVersion=0.1.0
+
+./gradlew :plugins:heatmap-layer:assembleRelease \
   -PpluginVersion=0.1.0
 ```
 

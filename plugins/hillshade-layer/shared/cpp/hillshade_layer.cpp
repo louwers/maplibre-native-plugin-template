@@ -484,7 +484,11 @@ const std::array<mln_plugin_render_target_descriptor_v1, 1> renderTargets = {{
     {sizeof(mln_plugin_render_target_descriptor_v1),
      1,
      MLN_PLUGIN_RENDER_TARGET_SOURCE_TILE,
-     MLN_PLUGIN_RENDER_TARGET_RGBA8},
+     MLN_PLUGIN_RENDER_TARGET_RGBA8,
+     MLN_PLUGIN_RENDER_TARGET_PER_TILE,
+     1.0f,
+     1.0f,
+     {0.0f, 0.0f, 0.0f, 1.0f}},
 }};
 
 const std::array<mln_plugin_texture_binding_v1, 1> prepareTextures = {{
@@ -492,6 +496,7 @@ const std::array<mln_plugin_texture_binding_v1, 1> prepareTextures = {{
      0,
      MLN_PLUGIN_TEXTURE_SOURCE_RASTER_DEM,
      0,
+     {},
      MLN_PLUGIN_TEXTURE_FILTER_NEAREST,
      MLN_PLUGIN_TEXTURE_WRAP_CLAMP,
      MLN_PLUGIN_TEXTURE_WRAP_CLAMP},
@@ -502,6 +507,7 @@ const std::array<mln_plugin_texture_binding_v1, 1> finalTextures = {{
      0,
      MLN_PLUGIN_TEXTURE_SOURCE_RENDER_TARGET,
      1,
+     {},
      MLN_PLUGIN_TEXTURE_FILTER_LINEAR,
      MLN_PLUGIN_TEXTURE_WRAP_CLAMP,
      MLN_PLUGIN_TEXTURE_WRAP_CLAMP},
@@ -519,6 +525,7 @@ const std::array<mln_plugin_render_pass_descriptor_v1, 2> renderPasses = {{
      MLN_PLUGIN_BLEND_REPLACE,
      0,
      0,
+     MLN_PLUGIN_TILE_PROJECTION_ALIGNED,
      prepareTextures.data(),
      prepareTextures.size()},
     {sizeof(mln_plugin_render_pass_descriptor_v1),
@@ -532,6 +539,7 @@ const std::array<mln_plugin_render_pass_descriptor_v1, 2> renderPasses = {{
      MLN_PLUGIN_BLEND_PREMULTIPLIED_ALPHA,
      0,
      0,
+     MLN_PLUGIN_TILE_PROJECTION_ALIGNED,
      finalTextures.data(),
      finalTextures.size()},
 }};

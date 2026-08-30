@@ -1,0 +1,6 @@
+{
+  "androidArtifact": "heatmap-layer",
+  "iosTarget": "//plugins/heatmap-layer:HeatmapLayer.xcframework",
+  "iosBazelOutput": "bazel-bin/plugins/heatmap-layer/HeatmapLayer.xcframework.xcframework.zip",
+  "iosAssetName": "HeatmapLayer"
+}

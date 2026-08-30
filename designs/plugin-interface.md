@@ -35,7 +35,7 @@ The plugin owns:
 
 `mln_plugin_descriptor_v1` contains a stable plugin ID/version, required host ABI interval, and one or more existing-layer extensions and/or new layer-type declarations. An extension names an existing target type and callback priority. A layer-type declaration names the new style type, required source kind, render stage, 3D behavior, properties, supported backends, shaders, and either geometry-layout callbacks or a RasterDEM render graph.
 
-The v1 value types are boolean, float, float2, RGBA color, length-aware UTF-8 string, float array, and color array. Descriptors can allow expressions and scalar authoring for array values, constrain numeric ranges/array lengths, and enumerate valid strings. Core evaluates camera expressions on the render thread and data-driven expressions during geometry layout. Transitions and coercion remain outside the current host implementation.
+The v1 value types are boolean, float, float2, RGBA color, length-aware UTF-8 string, float array, color array, and a color-ramp expression. Descriptors can allow expressions and scalar authoring for array values, constrain numeric ranges/array lengths, and enumerate valid strings. Core evaluates camera expressions on the render thread and data-driven expressions during geometry layout. A color-ramp value is evaluated by the host into a premultiplied 256-by-1 texture and can be bound declaratively by property name. Transitions and coercion remain outside the current host implementation.
 
 `mln_plugin_register_v1` copies strings, property metadata, and defaults into core-owned storage. The native library continues to own callback code and must stay loaded for the process lifetime. Unloading and unregistering are intentionally unsupported.
 
@@ -65,7 +65,7 @@ A geometry plugin layer names a GeoJSON/vector source. MapLibre schedules its vi
 
 Every plugin shader explicitly declares its attributes, uniform blocks, textures, stages, and resource scopes. Core assigns backend bindings and injects numeric binding macros into GLSL/MSL. The plugin fills host-owned uniform blocks through `update_uniform_block`; the callback receives tile matrices, camera state, evaluated property snapshots, and RasterDEM metadata. There is no implicit plugin uniform layout.
 
-A RasterDEM plugin layer instead supplies a declarative, topologically ordered render graph. A pass selects host full-tile or tile-mask geometry, a registered shader, an optional host render target, texture inputs, and ordinary draw/depth/blend/stencil/cull state. Core owns DEM upload, offscreen textures, render-target layer groups, masked final drawables, resize/context replacement, and drawable removal. Render-target outputs may feed later passes without exposing backend commands or C++ renderer objects to the plugin.
+A plugin layer may supply a declarative, topologically ordered render graph. A pass selects plugin-bucket geometry, a host viewport quad, RasterDEM full-tile geometry, or a RasterDEM tile mask; it also selects a registered shader, an optional host render target, texture inputs, and ordinary draw/depth/blend/stencil/cull state. Geometry graphs write triangle-list plugin buckets to scaled viewport/per-layer targets and composite them with main-pass viewport quads. RasterDEM graphs use source-tile/per-tile targets. Targets use RGBA8 or RGBA16F storage and declare their clear color. Passes can use replace, alpha, premultiplied-alpha, multiply, or additive blending. Core owns source upload, offscreen textures, render-target layer groups, resize/context replacement, and drawable removal. Render-target outputs and color-ramp property textures may feed later passes without exposing backend commands or C++ renderer objects to the plugin. Registration rejects graph shapes or texture sources the selected source host cannot execute.
 
 Fill-extrusion packets expose the already-uploaded index and semantic vertex buffers, tile matrix, evaluated constant values, interpolation factors, extrusion height conversion factor, and layer opacity. OpenGL exposes the ordinary triangle mesh. Vulkan exposes roof triangles and instanced walls separately. Plugins must use packet-declared offsets, strides, and attribute types and must not mutate buffer contents.
 
@@ -82,7 +82,7 @@ The C plugin interface replaces the source-bound, host-owned drawable use case, 
 - stable per-drawable or per-frame identity in uniform callbacks for independently animated objects and materials;
 - a generic Android or iOS constructor for an arbitrary registered plugin layer type, independent of style JSON and a source.
 
-`MLN_PLUGIN_SOURCE_NONE` and `MLN_PLUGIN_SOURCE_RASTER` remain reserved values and are rejected for new plugin layer declarations. A geometry plugin currently requires a GeoJSON or vector source; a render-graph plugin requires a RasterDEM source.
+`MLN_PLUGIN_SOURCE_NONE` and `MLN_PLUGIN_SOURCE_RASTER` remain reserved values and are rejected for new plugin layer declarations. A geometry plugin currently requires a GeoJSON or vector source and may optionally attach a render graph to its bucket output; a RasterDEM plugin requires a render graph.
 
 Applications can use built-in fill, line, circle, or symbol layers with GeoJSON or `CustomGeometrySource` when those primitives suffice. Source-bound C plugins cover custom bucket/layout/shader behavior, existing-layer extensions cover effects such as fill-extrusion shadows, and the backend-direct `CustomLayer`/`MLNCustomStyleLayer` API remains available when direct OpenGL or Metal commands are required. New generic C host capabilities should be added for the gaps above only when a concrete cross-platform plugin needs them.
 
@@ -124,6 +124,12 @@ The shared implementation parses GLB bytes with pinned TinyGLTF v2.9.7, flattens
 The `hillshade-layer` plugin registers source-bound RasterDEM type `org.maplibre.hillshade` while the built-in `hillshade` implementation remains available. Its first graph pass samples the host DEM texture over full-tile geometry and writes encoded derivatives into a host RGBA8 tile-sized render target. Its second pass samples that target over the host's DEM tile-mask geometry and blends into the map in the translucent/3D ordering used by built-in hillshade.
 
 The plugin declares the built-in hillshade paint surface, including scalar-or-array illumination directions/altitudes and highlight/shadow colors, enum-constrained method/anchor values, numeric limits, and camera expressions. Its uniform callback produces the same prepare, tile, and evaluated data used by the built-in OpenGL, Vulkan, and Metal shaders. Plugin-owned render tests contain the complete built-in hillshade fixture set with only the style-layer type changed; offline DEM/raster data and platform-specific expectations live with the plugin.
+
+## Worked example: heatmap layer
+
+The `heatmap-layer` plugin registers geometry-backed type `org.maplibre.heatmap` while the built-in `heatmap` implementation remains available. Layout turns every point into a four-vertex screen-radius splat and evaluates data-driven `heatmap-weight` and `heatmap-radius` values with the feature. Its first graph pass additively accumulates Gaussian density into a cleared, half-viewport RGBA16F per-layer target. Its second pass draws the host viewport quad, samples that density target plus the host-generated `heatmap-color` ramp, applies `heatmap-opacity`, and composites in the translucent pass. `heatmap-intensity` is evaluated from the current camera for the density pass.
+
+The plugin owns OpenGL, Vulkan, and Metal shader source but no backend commands or resources. Its render-test directory contains all built-in heatmap fixtures and expectations with only the style-layer type changed, making pixel parity with the retained core layer the acceptance criterion.
 
 ## iOS and Metal
 

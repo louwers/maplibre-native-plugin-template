@@ -12,6 +12,7 @@ on:
         options:
           - fill-extrusion-shadows
           - gltf-layer
+          - heatmap-layer
           - hillshade-layer
           - rectangle-layer
       version:
