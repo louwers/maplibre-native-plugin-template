@@ -1,0 +1,72 @@
+{
+  "version": 8,
+  "metadata": {
+    "test": {
+      "width": 256,
+      "height": 256,
+      "description": "Feature-state expressions update host-owned plugin paint buffers without relayout.",
+      "operations": [
+        ["setFeatureState", {"source": "points", "id": 2}, {"selected": true}],
+        ["wait"]
+      ]
+    }
+  },
+  "center": [0, 0],
+  "zoom": 10,
+  "sources": {
+    "points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": 1,
+            "properties": {},
+            "geometry": {"type": "Point", "coordinates": [-0.025, 0]}
+          },
+          {
+            "type": "Feature",
+            "id": 2,
+            "properties": {},
+            "geometry": {"type": "Point", "coordinates": [0.025, 0]}
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "#f2f3f5"}
+    },
+    {
+      "id": "points",
+      "type": "rectangle",
+      "source": "points",
+      "paint": {
+        "rectangle-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          "#e00030",
+          "#2468d8"
+        ],
+        "rectangle-width": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          62,
+          24
+        ],
+        "rectangle-height": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          46,
+          24
+        ],
+        "rectangle-stroke-width": 3,
+        "rectangle-stroke-color": "#111111"
+      }
+    }
+  ]
+}

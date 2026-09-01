@@ -22,9 +22,12 @@ using namespace maplibre::plugins::heatmap;
 
 constexpr uint32_t positionAttribute = 0;
 constexpr uint32_t cornerAttribute = 1;
-constexpr uint32_t weightAttribute = 2;
-constexpr uint32_t radiusAttribute = 3;
+constexpr uint32_t weightMinimumAttribute = 2;
+constexpr uint32_t weightMaximumAttribute = 3;
+constexpr uint32_t radiusMinimumAttribute = 4;
+constexpr uint32_t radiusMaximumAttribute = 5;
 constexpr uint32_t vertexStream = 0;
+constexpr uint64_t kernelDrawable = 1;
 
 constexpr mln_plugin_string str(const char *value, size_t size) {
   return {value, size};
@@ -58,15 +61,16 @@ constexpr mln_plugin_value makeColorRamp(const char (&value)[N]) {
 mln_plugin_property_descriptor_v1 floatProperty(mln_plugin_string name,
                                                 float defaultValue,
                                                 float minimum, float maximum,
-                                                bool hasMaximum) {
+                                                bool hasMaximum,
+                                                uint32_t expressionCapabilities) {
   mln_plugin_property_descriptor_v1 property{};
   property.struct_size = sizeof(property);
   property.name = name;
   property.type = MLN_PLUGIN_VALUE_FLOAT;
   property.scope = MLN_PLUGIN_PROPERTY_PAINT;
   property.default_value = makeFloat(defaultValue);
-  property.supports_expressions = 1;
-  property.supports_transitions = 0;
+  property.expression_capabilities = expressionCapabilities;
+  property.supports_transitions = 1;
   property.has_minimum = 1;
   property.has_maximum = hasMaximum;
   property.minimum = minimum;
@@ -78,55 +82,47 @@ constexpr char defaultColorRamp[] =
     R"JSON(["interpolate",["linear"],["heatmap-density"],0,"rgba(0, 0, 255, 0)",0.1,"royalblue",0.3,"cyan",0.5,"lime",0.7,"yellow",1,"red"])JSON";
 
 const std::array<mln_plugin_property_descriptor_v1, 5> properties = [] {
+  constexpr uint32_t cameraExpressions = MLN_PLUGIN_EXPRESSION_CAMERA;
+  constexpr uint32_t dataExpressions =
+      MLN_PLUGIN_EXPRESSION_CAMERA | MLN_PLUGIN_EXPRESSION_FEATURE |
+      MLN_PLUGIN_EXPRESSION_COMPOSITE | MLN_PLUGIN_EXPRESSION_FEATURE_STATE;
   std::array<mln_plugin_property_descriptor_v1, 5> result{};
   result[0].struct_size = sizeof(mln_plugin_property_descriptor_v1);
   result[0].name = str("heatmap-color");
   result[0].type = MLN_PLUGIN_VALUE_COLOR_RAMP;
   result[0].scope = MLN_PLUGIN_PROPERTY_PAINT;
   result[0].default_value = makeColorRamp(defaultColorRamp);
-  result[0].supports_expressions = 1;
-  result[1] = floatProperty(str("heatmap-intensity"), 1.0f, 0.0f, 0.0f, false);
-  result[2] = floatProperty(str("heatmap-opacity"), 1.0f, 0.0f, 1.0f, true);
-  result[3] = floatProperty(str("heatmap-radius"), 30.0f, 1.0f, 0.0f, false);
-  result[4] = floatProperty(str("heatmap-weight"), 1.0f, 0.0f, 0.0f, false);
+  result[0].expression_capabilities = cameraExpressions;
+  result[1] = floatProperty(str("heatmap-intensity"), 1.0f, 0.0f, 0.0f,
+                            false, cameraExpressions);
+  result[2] = floatProperty(str("heatmap-opacity"), 1.0f, 0.0f, 1.0f, true,
+                            cameraExpressions);
+  result[3] = floatProperty(str("heatmap-radius"), 30.0f, 1.0f, 0.0f, false,
+                            dataExpressions);
+  result[4] = floatProperty(str("heatmap-weight"), 1.0f, 0.0f, 0.0f, false,
+                            dataExpressions);
   return result;
 }();
 
 struct Vertex {
   int16_t position[2];
   int16_t corner[2];
-  float weight;
-  float radius;
 };
 
 static_assert(offsetof(Vertex, position) == 0);
 static_assert(offsetof(Vertex, corner) == 4);
-static_assert(offsetof(Vertex, weight) == 8);
-static_assert(offsetof(Vertex, radius) == 12);
-static_assert(sizeof(Vertex) == 16);
+static_assert(sizeof(Vertex) == 8);
 
 struct Layout {
   std::vector<Vertex> vertices;
   std::vector<uint16_t> indices;
   std::vector<mln_plugin_segment_v1> segments;
+  std::vector<mln_plugin_feature_vertex_range_v1> featureRanges;
   std::array<mln_plugin_vertex_stream_v1, 1> streams{};
-  std::array<mln_plugin_attribute_binding_v1, 4> attributes{};
+  std::array<mln_plugin_attribute_binding_v1, 2> attributes{};
   std::array<mln_plugin_drawable_descriptor_v1, 1> drawables{};
   uint32_t extent = 8192;
 };
-
-const mln_plugin_value *property(const mln_plugin_feature_v1 &feature,
-                                 const char *name) {
-  const auto length = std::strlen(name);
-  for (size_t i = 0; i < feature.evaluated_property_count; ++i) {
-    const auto &candidate = feature.evaluated_properties[i];
-    if (candidate.name.data && candidate.name.size == length &&
-        std::memcmp(candidate.name.data, name, length) == 0) {
-      return &candidate.value;
-    }
-  }
-  return nullptr;
-}
 
 const mln_plugin_value *property(const mln_plugin_uniform_context_v1 &context,
                                  const char *name) {
@@ -139,15 +135,6 @@ const mln_plugin_value *property(const mln_plugin_uniform_context_v1 &context,
     }
   }
   return nullptr;
-}
-
-float number(const mln_plugin_feature_v1 &feature, const char *name,
-             float fallback) {
-  const auto *value = property(feature, name);
-  return value && value->type == MLN_PLUGIN_VALUE_FLOAT &&
-                 std::isfinite(value->data.float_value)
-             ? value->data.float_value
-             : fallback;
 }
 
 float number(const mln_plugin_uniform_context_v1 &context, const char *name,
@@ -191,9 +178,7 @@ mln_plugin_status layoutFeature(void *instance,
     return MLN_PLUGIN_STATUS_INVALID_ARGUMENT;
   }
   auto &layout = *static_cast<Layout *>(instance);
-  const float weight = std::max(0.0f, number(*feature, "heatmap-weight", 1.0f));
-  const float radius =
-      std::max(1.0f, number(*feature, "heatmap-radius", 30.0f));
+  const auto firstVertex = static_cast<uint32_t>(layout.vertices.size());
 
   for (size_t pointIndex = 0; pointIndex < feature->point_count; ++pointIndex) {
     const auto point = feature->points[pointIndex];
@@ -208,8 +193,7 @@ mln_plugin_status layoutFeature(void *instance,
     const uint16_t base = static_cast<uint16_t>(segment.vertex_length);
     constexpr int16_t corners[4][2] = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
     for (const auto &corner : corners) {
-      layout.vertices.push_back(
-          {{point.x, point.y}, {corner[0], corner[1]}, weight, radius});
+      layout.vertices.push_back({{point.x, point.y}, {corner[0], corner[1]}});
     }
     const uint16_t quad[] = {
         base, static_cast<uint16_t>(base + 1), static_cast<uint16_t>(base + 2),
@@ -219,6 +203,13 @@ mln_plugin_status layoutFeature(void *instance,
     segment.vertex_length += 4;
     segment.index_length += 6;
     segment.feature_index = feature->feature_index;
+  }
+  if (layout.vertices.size() > firstVertex) {
+    layout.featureRanges.push_back({sizeof(mln_plugin_feature_vertex_range_v1),
+                                    feature->feature_index,
+                                    kernelDrawable,
+                                    firstVertex,
+                                    static_cast<uint32_t>(layout.vertices.size() - firstVertex)});
   }
   return MLN_PLUGIN_STATUS_OK;
 }
@@ -246,14 +237,10 @@ mln_plugin_status finishLayout(void *instance, mln_plugin_bucket_v1 *output) {
        offsetof(Vertex, position), MLN_PLUGIN_VERTEX_INT16_X2},
       {sizeof(mln_plugin_attribute_binding_v1), cornerAttribute, vertexStream,
        offsetof(Vertex, corner), MLN_PLUGIN_VERTEX_INT16_X2},
-      {sizeof(mln_plugin_attribute_binding_v1), weightAttribute, vertexStream,
-       offsetof(Vertex, weight), MLN_PLUGIN_VERTEX_FLOAT},
-      {sizeof(mln_plugin_attribute_binding_v1), radiusAttribute, vertexStream,
-       offsetof(Vertex, radius), MLN_PLUGIN_VERTEX_FLOAT},
   }};
   auto &drawable = layout.drawables[0];
   drawable.struct_size = sizeof(drawable);
-  drawable.drawable_key = 1;
+  drawable.drawable_key = kernelDrawable;
   drawable.shader_id = str("heatmap-kernel");
   drawable.draw_mode = MLN_PLUGIN_DRAW_MODE_TRIANGLES;
   drawable.render_stage = MLN_PLUGIN_RENDER_STAGE_TRANSLUCENT;
@@ -274,6 +261,8 @@ mln_plugin_status finishLayout(void *instance, mln_plugin_bucket_v1 *output) {
       layout.indices.empty() ? nullptr : layout.drawables.data();
   output->drawable_count = layout.indices.empty() ? 0 : layout.drawables.size();
   output->query_radius = 0.0f;
+  output->feature_vertex_ranges = layout.featureRanges.data();
+  output->feature_vertex_range_count = layout.featureRanges.size();
   return MLN_PLUGIN_STATUS_OK;
 }
 
@@ -284,6 +273,10 @@ struct alignas(16) KernelUBO {
   float pixelsToTileUnits;
   float intensity;
   float padding[2];
+  float weight;
+  float radius;
+  float propertyPadding[2];
+  float interpolation[4];
 };
 
 struct alignas(16) CompositeUBO {
@@ -292,7 +285,7 @@ struct alignas(16) CompositeUBO {
   float padding[3];
 };
 
-static_assert(sizeof(KernelUBO) == 80);
+static_assert(sizeof(KernelUBO) == 112);
 static_assert(sizeof(CompositeUBO) == 80);
 
 mln_plugin_status updateUniform(const mln_plugin_uniform_context_v1 *context,
@@ -320,15 +313,43 @@ mln_plugin_status updateUniform(const mln_plugin_uniform_context_v1 *context,
   return MLN_PLUGIN_STATUS_INVALID_ARGUMENT;
 }
 
-const std::array<mln_plugin_shader_attribute_v1, 4> kernelAttributes = {{
+float queryRadius(const mln_plugin_property_statistics_v1 *statistics,
+                  size_t statisticsCount,
+                  const mln_plugin_property_value_v1 *cameraProperties,
+                  size_t cameraPropertyCount) {
+  constexpr char name[] = "heatmap-radius";
+  for (size_t i = 0; i < statisticsCount; ++i) {
+    const auto &candidate = statistics[i];
+    if (candidate.property_name.data && candidate.property_name.size == sizeof(name) - 1 &&
+        std::memcmp(candidate.property_name.data, name, sizeof(name) - 1) == 0 &&
+        candidate.maximum.type == MLN_PLUGIN_VALUE_FLOAT) {
+      return std::max(0.0f, candidate.maximum.data.float_value);
+    }
+  }
+  for (size_t i = 0; i < cameraPropertyCount; ++i) {
+    const auto &candidate = cameraProperties[i];
+    if (candidate.name.data && candidate.name.size == sizeof(name) - 1 &&
+        std::memcmp(candidate.name.data, name, sizeof(name) - 1) == 0 &&
+        candidate.value.type == MLN_PLUGIN_VALUE_FLOAT) {
+      return std::max(0.0f, candidate.value.data.float_value);
+    }
+  }
+  return 30.0f;
+}
+
+const std::array<mln_plugin_shader_attribute_v1, 6> kernelAttributes = {{
     {sizeof(mln_plugin_shader_attribute_v1), positionAttribute, 0,
      str("a_position"), MLN_PLUGIN_VERTEX_INT16_X2},
     {sizeof(mln_plugin_shader_attribute_v1), cornerAttribute, 1,
      str("a_corner"), MLN_PLUGIN_VERTEX_INT16_X2},
-    {sizeof(mln_plugin_shader_attribute_v1), weightAttribute, 2,
-     str("a_weight"), MLN_PLUGIN_VERTEX_FLOAT},
-    {sizeof(mln_plugin_shader_attribute_v1), radiusAttribute, 3,
-     str("a_radius"), MLN_PLUGIN_VERTEX_FLOAT},
+    {sizeof(mln_plugin_shader_attribute_v1), weightMinimumAttribute, 2,
+     str("a_weight_min"), MLN_PLUGIN_VERTEX_FLOAT},
+    {sizeof(mln_plugin_shader_attribute_v1), weightMaximumAttribute, 3,
+     str("a_weight_max"), MLN_PLUGIN_VERTEX_FLOAT},
+    {sizeof(mln_plugin_shader_attribute_v1), radiusMinimumAttribute, 4,
+     str("a_radius_min"), MLN_PLUGIN_VERTEX_FLOAT},
+    {sizeof(mln_plugin_shader_attribute_v1), radiusMaximumAttribute, 5,
+     str("a_radius_max"), MLN_PLUGIN_VERTEX_FLOAT},
 }};
 
 const std::array<mln_plugin_shader_attribute_v1, 1> compositeAttributes = {{
@@ -355,6 +376,18 @@ const std::array<mln_plugin_shader_texture_v1, 2> compositeTextures = {{
     {sizeof(mln_plugin_shader_texture_v1), 0, 0, str("u_density")},
     {sizeof(mln_plugin_shader_texture_v1), 1, 1, str("u_color_ramp")},
 }};
+
+const std::array<mln_plugin_shader_property_binding_v1, 2>
+    kernelPropertyBindings = {{
+        {sizeof(mln_plugin_shader_property_binding_v1), str("heatmap-weight"),
+         MLN_PLUGIN_PROPERTY_ENCODING_FLOAT, 0, offsetof(KernelUBO, weight),
+         weightMinimumAttribute, weightMaximumAttribute, 0,
+         offsetof(KernelUBO, interpolation)},
+        {sizeof(mln_plugin_shader_property_binding_v1), str("heatmap-radius"),
+         MLN_PLUGIN_PROPERTY_ENCODING_FLOAT, 0, offsetof(KernelUBO, radius),
+         radiusMinimumAttribute, radiusMaximumAttribute, 0,
+         offsetof(KernelUBO, interpolation) + sizeof(float)},
+    }};
 
 const std::array<mln_plugin_shader_source_v1, 3> kernelSources = {{
     {sizeof(mln_plugin_shader_source_v1),
@@ -412,12 +445,12 @@ const std::array<mln_plugin_shader_descriptor_v1, 2> shaderDescriptors = {{
     {sizeof(mln_plugin_shader_descriptor_v1), str("heatmap-kernel"),
      kernelSources.data(), kernelSources.size(), kernelAttributes.data(),
      kernelAttributes.size(), kernelUniforms.data(), kernelUniforms.size(),
-     nullptr, 0},
+     nullptr, 0, kernelPropertyBindings.data(), kernelPropertyBindings.size()},
     {sizeof(mln_plugin_shader_descriptor_v1), str("heatmap-composite"),
      compositeSources.data(), compositeSources.size(),
      compositeAttributes.data(), compositeAttributes.size(),
      compositeUniforms.data(), compositeUniforms.size(),
-     compositeTextures.data(), compositeTextures.size()},
+     compositeTextures.data(), compositeTextures.size(), nullptr, 0},
 }};
 
 const std::array<mln_plugin_render_target_descriptor_v1, 1> renderTargets = {{
@@ -490,6 +523,7 @@ const mln_plugin_layer_type_v1 layerType = [] {
   value.render_graph = &renderGraph;
   value.update_uniform_block = updateUniform;
   value.participates_in_3d_pass = 1;
+  value.get_query_radius = queryRadius;
   return value;
 }();
 

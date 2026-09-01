@@ -1,6 +1,6 @@
 # Dynamic property binders for plugin layers
 
-Status: proposed change to the unpublished v1 C API.
+Status: implemented in the unpublished v1 C API.
 
 ## Objective
 
@@ -8,7 +8,7 @@ Give source-bound plugin layers the same paint-property behavior as generated Ma
 
 The implementation modifies ABI v1 in place. The API has not been published, so no compatibility path or legacy descriptor interpretation is required.
 
-## Current behavior and problem
+## Previous behavior and problem
 
 `supports_expressions` causes core to parse a plugin property as a normal typed `PropertyValue<T>`. Geometry layout evaluates each property once for each feature at the bucket's tile zoom and provides the result through `mln_plugin_feature_v1.evaluated_properties`. Plugins such as rectangle and heatmap copy those values into their own static vertex streams. The render-thread uniform callback separately receives camera-evaluated property values.
 
@@ -34,7 +34,7 @@ The present rectangle bucket also demonstrates why segments cannot serve as the 
 
 ## Property capabilities
 
-Replace the ambiguous `supports_expressions` byte with dependency capabilities:
+The ABI replaces the ambiguous `supports_expressions` byte with dependency capabilities:
 
 ```c
 typedef enum mln_plugin_expression_capability {
@@ -200,37 +200,36 @@ The result is cached per bucket/layer and invalidated by binder or feature-state
 
 No plugin callback is invoked once merely to copy standard numeric paint values. Optional plugin callbacks remain for custom uniform fields, query-radius calculation, layout, and precise hit testing.
 
-## Implementation sequence
+## Implemented changes
 
-1. Replace `supports_expressions` with dependency capabilities and validate parsed expression dependencies.
-2. Add shader property-binding descriptors and backend-independent registration validation.
-3. Add feature vertex ranges to bucket output and update rectangle/heatmap layouts to emit them.
-4. Extract a type-erased runtime binder from the built-in binder algorithms for float, float2, color, and boolean.
-5. Store host-owned plugin paint streams in `PluginBucket` and bind them alongside plugin geometry streams.
-6. Add shader permutation keys and injected uniform/attribute macros to all three shader backends.
-7. Implement composite interpolation UBO updates in `PluginLayerTweaker`.
-8. Implement `PluginBucket::update` and partial feature-state buffer updates.
-9. Split plugin layout and paint invalidation; remove blanket plugin-property relayout.
-10. Implement plugin transitionable/evaluated paint storage.
-11. Evaluate camera expressions for existing-layer extension snapshots and reject unsupported dependencies.
-12. Add dynamic query-radius statistics and callback support.
-13. Convert rectangle and heatmap plugins to declarative host bindings, removing their manually baked paint fields.
+1. Replaced `supports_expressions` with dependency capabilities and validation of parsed expression dependencies.
+2. Added shader property-binding descriptors and backend-independent registration validation.
+3. Added feature vertex ranges to bucket output and updated rectangle/heatmap layouts to emit them.
+4. Added a type-erased runtime binder for float, float2, color, and boolean values.
+5. Stored host-owned plugin paint streams in `PluginBucket` and bound them alongside plugin geometry streams.
+6. Added shader permutation keys and injected uniform/attribute macros to all three shader backends.
+7. Implemented composite interpolation UBO updates in `PluginLayerTweaker`.
+8. Implemented `PluginBucket::update` and partial feature-state buffer updates.
+9. Split plugin layout and paint invalidation, removing blanket plugin-property relayout.
+10. Implemented plugin transitionable/evaluated paint storage.
+11. Evaluated camera expressions for existing-layer extension snapshots and rejected unsupported dependencies.
+12. Added per-layer dynamic query-radius statistics and callback support.
+13. Converted rectangle and heatmap plugins to declarative host bindings, removing their manually baked paint fields.
 
 ## Validation
 
-Core tests cover descriptor validation, dependency restrictions, constant/source/composite binder selection, encoding and buffer ranges, shader permutation caching, zoom interpolation, paint-only invalidation, partial feature-state updates, transitions, and existing-layer extension camera expressions.
+Core tests cover descriptor validation, dependency restrictions, encoding and buffer ranges, and transition parsing/interpolation. Plugin render fixtures exercise the host binder paths end to end.
 
 Plugin render tests cover:
 
-- rectangle width, height, color, stroke width, and stroke color as constants;
-- each rectangle property using `get`, camera-only interpolation, feature-and-zoom interpolation, and feature state;
-- smooth intermediate frames between integer zooms;
-- runtime changes without geometry or index-buffer replacement;
-- identical OpenGL, Vulkan, and Metal expectations;
-- heatmap weight and radius parity with the retained built-in heatmap layer;
-- conservative and precise rendered-feature queries after dynamic updates.
+- rectangle width, height, and color as source expressions, with constant stroke properties;
+- width and height as feature-and-zoom expressions at fractional zoom;
+- color, width, and height updates driven by feature state;
+- runtime replacement of color, width, height, and stroke width without relayout;
+- shared expectations used by the OpenGL, Vulkan, and Metal plugin runners;
+- heatmap camera/source-expression parity with the retained built-in heatmap fixtures.
 
-An instrumentation test records rectangle vertex/index buffer identities before and after paint changes and asserts that only the host paint buffer or property UBO changes. A render test at fractional zooms 10.0, 10.25, 10.5, 10.75, and 11.0 prevents a regression back to tile-zoom stepping.
+The rectangle suite includes runtime paint replacement, feature-state mutation, and a fractional composite-zoom fixture. The shared runner also executes the retained heatmap fixtures, including feature-driven weight and radius cases, against the same host binder implementation.
 
 ## Acceptance criteria
 

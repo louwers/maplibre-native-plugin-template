@@ -85,8 +85,8 @@ mln_plugin_property_descriptor_v1 propertyDescriptor(mln_plugin_string name,
     property.type = type;
     property.scope = MLN_PLUGIN_PROPERTY_PAINT;
     property.default_value = defaultValue;
-    property.supports_expressions = 1;
-    property.supports_transitions = 0;
+    property.expression_capabilities = MLN_PLUGIN_EXPRESSION_CAMERA;
+    property.supports_transitions = type == MLN_PLUGIN_VALUE_FLOAT || type == MLN_PLUGIN_VALUE_COLOR;
     property.accepts_scalar = acceptsScalar;
     property.has_minimum = minimum.has_value();
     property.has_maximum = maximum.has_value();

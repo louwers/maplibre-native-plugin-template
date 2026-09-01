@@ -1,0 +1,54 @@
+{
+  "version": 8,
+  "metadata": {
+    "test": {
+      "width": 256,
+      "height": 256,
+      "description": "Runtime paint replacement updates rectangle binders while retaining geometry.",
+      "operations": [
+        ["setPaintProperty", "points", "rectangle-color", "#18a058"],
+        ["setPaintProperty", "points", "rectangle-width", 58],
+        ["setPaintProperty", "points", "rectangle-height", 34],
+        ["setPaintProperty", "points", "rectangle-stroke-width", 5],
+        ["wait"]
+      ]
+    }
+  },
+  "center": [0, 0],
+  "zoom": 10,
+  "sources": {
+    "points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": 1,
+            "properties": {},
+            "geometry": {"type": "Point", "coordinates": [0, 0]}
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "#f2f3f5"}
+    },
+    {
+      "id": "points",
+      "type": "rectangle",
+      "source": "points",
+      "paint": {
+        "rectangle-color": "#7755cc",
+        "rectangle-width": 18,
+        "rectangle-height": 18,
+        "rectangle-stroke-width": 1,
+        "rectangle-stroke-color": "#111111"
+      }
+    }
+  ]
+}

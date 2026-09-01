@@ -5,8 +5,14 @@ namespace maplibre::plugins::heatmap::shaders {
 inline constexpr const char* glKernelVertex = R"MLNSHADER(
 layout (location = 0) in vec2 a_position;
 layout (location = 1) in vec2 a_corner;
-layout (location = 2) in float a_weight;
-layout (location = 3) in float a_radius;
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_WEIGHT_IS_UNIFORM
+layout (location = 2) in float a_weight_min;
+layout (location = 3) in float a_weight_max;
+#endif
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_RADIUS_IS_UNIFORM
+layout (location = 4) in float a_radius_min;
+layout (location = 5) in float a_radius_max;
+#endif
 
 layout (std140) uniform HeatmapKernelUBO {
     highp mat4 u_matrix;
@@ -14,6 +20,11 @@ layout (std140) uniform HeatmapKernelUBO {
     highp float u_intensity;
     highp float u_pad0;
     highp float u_pad1;
+    highp float u_weight;
+    highp float u_radius;
+    highp float u_property_pad0;
+    highp float u_property_pad1;
+    highp vec4 u_interpolation;
 };
 
 out highp float v_weight;
@@ -23,11 +34,21 @@ const highp float ZERO = 1.0 / 255.0 / 16.0;
 #define GAUSS_COEF 0.3989422804014327
 
 void main() {
-    float S = sqrt(-2.0 * log(ZERO / (max(a_weight, ZERO) * max(u_intensity, ZERO) * GAUSS_COEF))) / 3.0;
+    float weight = u_weight;
+    float radius = u_radius;
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_WEIGHT_IS_UNIFORM
+    weight = mix(a_weight_min, a_weight_max, u_interpolation.x);
+#endif
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_RADIUS_IS_UNIFORM
+    radius = mix(a_radius_min, a_radius_max, u_interpolation.y);
+#endif
+    weight = max(weight, 0.0);
+    radius = max(radius, 1.0);
+    float S = sqrt(-2.0 * log(ZERO / (max(weight, ZERO) * max(u_intensity, ZERO) * GAUSS_COEF))) / 3.0;
     v_extrude = S * a_corner;
-    vec2 extrude = v_extrude * a_radius * u_pixels_to_tile_units;
+    vec2 extrude = v_extrude * radius * u_pixels_to_tile_units;
     gl_Position = u_matrix * vec4(a_position + extrude, 0.0, 1.0);
-    v_weight = a_weight;
+    v_weight = weight;
 }
 )MLNSHADER";
 
@@ -42,6 +63,11 @@ layout (std140) uniform HeatmapKernelUBO {
     highp float u_intensity;
     highp float u_pad0;
     highp float u_pad1;
+    highp float u_weight;
+    highp float u_radius;
+    highp float u_property_pad0;
+    highp float u_property_pad1;
+    highp vec4 u_interpolation;
 };
 
 in highp float v_weight;
@@ -107,8 +133,14 @@ void main() {
 inline constexpr const char* vulkanKernelVertex = R"MLNSHADER(
 layout(location = 0) in ivec2 in_position;
 layout(location = 1) in ivec2 in_corner;
-layout(location = 2) in float in_weight;
-layout(location = 3) in float in_radius;
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_WEIGHT_IS_UNIFORM
+layout(location = 2) in float in_weight_min;
+layout(location = 3) in float in_weight_max;
+#endif
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_RADIUS_IS_UNIFORM
+layout(location = 4) in float in_radius_min;
+layout(location = 5) in float in_radius_max;
+#endif
 
 layout(std140, set = DRAWABLE_UBO_SET_INDEX, binding = MLN_PLUGIN_UNIFORM_0_BINDING) uniform HeatmapKernelUBO {
     mat4 matrix;
@@ -116,6 +148,11 @@ layout(std140, set = DRAWABLE_UBO_SET_INDEX, binding = MLN_PLUGIN_UNIFORM_0_BIND
     float intensity;
     float pad0;
     float pad1;
+    float weight;
+    float radius;
+    float property_pad0;
+    float property_pad1;
+    vec4 interpolation;
 } props;
 
 layout(location = 0) out float frag_weight;
@@ -125,12 +162,22 @@ const float ZERO = 1.0 / 255.0 / 16.0;
 #define GAUSS_COEF 0.3989422804014327
 
 void main() {
-    float S = sqrt(-2.0 * log(ZERO / (max(in_weight, ZERO) * max(props.intensity, ZERO) * GAUSS_COEF))) / 3.0;
+    float weight = props.weight;
+    float radius = props.radius;
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_WEIGHT_IS_UNIFORM
+    weight = mix(in_weight_min, in_weight_max, props.interpolation.x);
+#endif
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_RADIUS_IS_UNIFORM
+    radius = mix(in_radius_min, in_radius_max, props.interpolation.y);
+#endif
+    weight = max(weight, 0.0);
+    radius = max(radius, 1.0);
+    float S = sqrt(-2.0 * log(ZERO / (max(weight, ZERO) * max(props.intensity, ZERO) * GAUSS_COEF))) / 3.0;
     frag_extrude = S * vec2(in_corner);
-    vec2 extrude = frag_extrude * in_radius * props.pixels_to_tile_units;
+    vec2 extrude = frag_extrude * radius * props.pixels_to_tile_units;
     gl_Position = props.matrix * vec4(vec2(in_position) + extrude, 0.0, 1.0);
     applySurfaceTransform();
-    frag_weight = in_weight;
+    frag_weight = weight;
 }
 )MLNSHADER";
 
@@ -145,6 +192,11 @@ layout(std140, set = DRAWABLE_UBO_SET_INDEX, binding = MLN_PLUGIN_UNIFORM_0_BIND
     float intensity;
     float pad0;
     float pad1;
+    float weight;
+    float radius;
+    float property_pad0;
+    float property_pad1;
+    vec4 interpolation;
 } props;
 
 #define GAUSS_COEF 0.3989422804014327
@@ -212,13 +264,24 @@ struct alignas(16) HeatmapKernelUBO {
     float intensity;
     float pad0;
     float pad1;
+    float weight;
+    float radius;
+    float property_pad0;
+    float property_pad1;
+    float4 interpolation;
 };
 
 struct VertexStage {
     short2 position [[attribute(0)]];
     short2 corner [[attribute(1)]];
-    float weight [[attribute(2)]];
-    float radius [[attribute(3)]];
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_WEIGHT_IS_UNIFORM
+    float weight_min [[attribute(2)]];
+    float weight_max [[attribute(3)]];
+#endif
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_RADIUS_IS_UNIFORM
+    float radius_min [[attribute(4)]];
+    float radius_max [[attribute(5)]];
+#endif
 };
 
 struct FragmentStage {
@@ -232,12 +295,22 @@ constant const float ZERO = 1.0 / 255.0 / 16.0;
 
 FragmentStage vertex vertexMain(thread const VertexStage vertx [[stage_in]],
                                 device const HeatmapKernelUBO& props [[buffer(MLN_PLUGIN_UNIFORM_0_BINDING)]]) {
-    float S = sqrt(-2.0 * log(ZERO / (max(vertx.weight, ZERO) * max(props.intensity, ZERO) * GAUSS_COEF))) / 3.0;
+    float weight = props.weight;
+    float radius = props.radius;
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_WEIGHT_IS_UNIFORM
+    weight = mix(vertx.weight_min, vertx.weight_max, props.interpolation.x);
+#endif
+#if !MLN_PLUGIN_PROPERTY_HEATMAP_RADIUS_IS_UNIFORM
+    radius = mix(vertx.radius_min, vertx.radius_max, props.interpolation.y);
+#endif
+    weight = max(weight, 0.0);
+    radius = max(radius, 1.0);
+    float S = sqrt(-2.0 * log(ZERO / (max(weight, ZERO) * max(props.intensity, ZERO) * GAUSS_COEF))) / 3.0;
     float2 extrude = S * float2(vertx.corner);
-    float2 offset = extrude * vertx.radius * props.pixels_to_tile_units;
+    float2 offset = extrude * radius * props.pixels_to_tile_units;
     return {
         .position = props.matrix * float4(float2(vertx.position) + offset, 0.0, 1.0),
-        .weight = vertx.weight,
+        .weight = weight,
         .extrude = extrude,
     };
 }

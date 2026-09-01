@@ -1,0 +1,61 @@
+{
+  "version": 8,
+  "metadata": {
+    "test": {
+      "width": 256,
+      "height": 256,
+      "description": "Composite rectangle paint expressions interpolate at the rendered fractional zoom."
+    }
+  },
+  "center": [0, 0],
+  "zoom": 10.5,
+  "sources": {
+    "points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "id": 1,
+            "properties": {"kind": "wide", "fill": "#e00030"},
+            "geometry": {"type": "Point", "coordinates": [-0.025, 0]}
+          },
+          {
+            "type": "Feature",
+            "id": 2,
+            "properties": {"kind": "tall", "fill": "#6030e0"},
+            "geometry": {"type": "Point", "coordinates": [0.025, 0]}
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "#f2f3f5"}
+    },
+    {
+      "id": "points",
+      "type": "rectangle",
+      "source": "points",
+      "paint": {
+        "rectangle-color": ["get", "fill"],
+        "rectangle-width": [
+          "interpolate", ["linear"], ["zoom"],
+          10, ["match", ["get", "kind"], "wide", 20, 12],
+          11, ["match", ["get", "kind"], "wide", 68, 36]
+        ],
+        "rectangle-height": [
+          "interpolate", ["linear"], ["zoom"],
+          10, ["match", ["get", "kind"], "tall", 20, 12],
+          11, ["match", ["get", "kind"], "tall", 68, 36]
+        ],
+        "rectangle-stroke-width": 3,
+        "rectangle-stroke-color": "#111111"
+      }
+    }
+  ]
+}
