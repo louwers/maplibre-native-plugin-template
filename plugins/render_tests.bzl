@@ -6,7 +6,6 @@ requires adding its package name here once.
 """
 
 RENDER_TEST_PLUGIN_PACKAGES = [
-    "fill-extrusion-shadows",
     "gltf-layer",
     "heatmap-layer",
     "hillshade-layer",

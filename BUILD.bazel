@@ -2,12 +2,6 @@ load("@rules_apple//apple:macos.bzl", "macos_command_line_application")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test", "objc_library")
 
 filegroup(
-    name = "liberty_shadow_style",
-    srcs = ["examples/android-app/app/src/main/assets/liberty-shadow.json"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "positron_gltf_style",
     srcs = ["examples/android-app/app/src/main/assets/positron-gltf.json"],
     visibility = ["//visibility:public"],

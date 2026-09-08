@@ -1,4 +1,4 @@
-package org.maplibre.plugins.shadows.demo;
+package org.maplibre.plugins.demo;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -11,7 +11,6 @@ public final class MainActivity extends Activity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    findViewById(R.id.demo_shadows).setOnClickListener(view -> open(ShadowDemoActivity.class));
     findViewById(R.id.demo_gltf).setOnClickListener(view -> open(GltfDemoActivity.class));
     findViewById(R.id.demo_rectangles).setOnClickListener(view -> open(RectangleDemoActivity.class));
     findViewById(R.id.demo_heatmap).setOnClickListener(view -> open(HeatmapDemoActivity.class));

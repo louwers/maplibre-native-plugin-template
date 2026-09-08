@@ -43,18 +43,6 @@
             android:textSize="16sp" />
 
         <LinearLayout
-            android:id="@+id/demo_shadows"
-            style="@style/DemoCard"
-            android:contentDescription="@string/shadows_title">
-            <TextView style="@style/DemoCardIcon" android:text="☀" />
-            <LinearLayout style="@style/DemoCardCopy">
-                <TextView style="@style/DemoCardTitle" android:text="@string/shadows_title" />
-                <TextView style="@style/DemoCardDescription" android:text="@string/shadows_description" />
-            </LinearLayout>
-            <TextView style="@style/DemoCardArrow" />
-        </LinearLayout>
-
-        <LinearLayout
             android:id="@+id/demo_gltf"
             style="@style/DemoCard"
             android:contentDescription="@string/gltf_title">

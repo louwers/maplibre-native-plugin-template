@@ -594,7 +594,8 @@ const mln_plugin_layer_type_v1 layerType = [] {
 const mln_plugin_descriptor_v1 descriptor = {
     sizeof(mln_plugin_descriptor_v1), MLN_PLUGIN_ABI_VERSION_1,
     str("org.maplibre.gltf-layer"), str(MLN_GLTF_PLUGIN_VERSION, sizeof(MLN_GLTF_PLUGIN_VERSION) - 1),
-    MLN_PLUGIN_ABI_VERSION_1, MLN_PLUGIN_ABI_VERSION_1, nullptr, 0, &layerType, 1,
+    MLN_PLUGIN_ABI_VERSION_1, MLN_PLUGIN_ABI_VERSION_1,
+    &layerType, 1,
 };
 
 } // namespace

@@ -703,8 +703,6 @@ const mln_plugin_descriptor_v1 descriptor = {
     str(MLN_RECTANGLE_PLUGIN_VERSION, sizeof(MLN_RECTANGLE_PLUGIN_VERSION) - 1),
     MLN_PLUGIN_ABI_VERSION_1,
     MLN_PLUGIN_ABI_VERSION_1,
-    nullptr,
-    0,
     &layerType,
     1,
 };

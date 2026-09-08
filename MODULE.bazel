@@ -18,25 +18,6 @@ apple_cc_configure = use_extension(
 use_repo(apple_cc_configure, "local_config_apple_cc", "local_config_apple_cc_toolchains")
 register_toolchains("@local_config_apple_cc_toolchains//:all")
 
-http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "fill_extrusion_shadows_release",
-    build_file_content = """
-load("@rules_apple//apple:apple.bzl", "apple_static_xcframework_import")
-
-apple_static_xcframework_import(
-    name = "FillExtrusionShadows",
-    xcframework_imports = glob(["FillExtrusionShadows.xcframework/**"]),
-    visibility = ["//visibility:public"],
-)
-""",
-    sha256 = "d732e39a47bdca084189cd4f27f091fb2e9f7a979f59d79aa95e20a74bfb6d53",
-    urls = [
-        "https://github.com/louwers/maplibre-native-plugin-template/releases/download/0.0.2/FillExtrusionShadows-0.0.2.xcframework.zip",
-    ],
-)
-
 # Development and CI place this repository directly inside or next to the
 # matching MapLibre Native checkout.
 local_path_override(

@@ -10,10 +10,6 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "FillExtrusionShadows",
-            targets: ["FillExtrusionShadows"]
-        ),
-        .library(
             name: "GltfLayer",
             targets: ["GltfLayer"]
         ),
@@ -36,30 +32,6 @@ let package = Package(
             path: "MapLibrePluginApi",
             sources: ["src/plugin_api_anchor.c"],
             publicHeadersPath: "include"
-        ),
-        .target(
-            name: "FillExtrusionShadows",
-            dependencies: ["MapLibrePluginApi"],
-            path: "plugins/fill-extrusion-shadows",
-            exclude: [
-                "BUILD.bazel",
-                "android",
-            ],
-            sources: [
-                "ios/src/FillExtrusionShadows.mm",
-                "ios/src/shadow_metal.mm",
-                "shared/cpp/shadow_plugin.cpp",
-            ],
-            publicHeadersPath: "ios/include",
-            cxxSettings: [
-                .headerSearchPath("shared/include"),
-                .define("MLN_SHADOW_METAL", to: "1"),
-                .define("MLN_SHADOW_PLUGIN_VERSION", to: "\"0.0.2\""),
-            ],
-            linkerSettings: [
-                .linkedFramework("Foundation"),
-                .linkedFramework("Metal"),
-            ]
         ),
         .target(
             name: "TinyGLTF",

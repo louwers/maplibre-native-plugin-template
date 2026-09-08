@@ -10,7 +10,6 @@ on:
         required: true
         type: choice
         options:
-          - fill-extrusion-shadows
           - gltf-layer
           - heatmap-layer
           - hillshade-layer

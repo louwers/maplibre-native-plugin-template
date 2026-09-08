@@ -5,11 +5,11 @@ plugins {
 val maplibreVersion = providers.gradleProperty("maplibreVersion")
 
 android {
-    namespace = "org.maplibre.plugins.shadows.demo"
+    namespace = "org.maplibre.plugins.demo"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "org.maplibre.plugins.shadows.demo"
+        applicationId = "org.maplibre.plugins.demo"
         minSdk = 23
         targetSdk = 34
         versionCode = 1
@@ -32,7 +32,6 @@ android {
 dependencies {
     "openglImplementation"("org.maplibre.gl:android-sdk-opengl:${maplibreVersion.get()}")
     "vulkanImplementation"("org.maplibre.gl:android-sdk-vulkan:${maplibreVersion.get()}")
-    implementation(project(":plugins:fill-extrusion-shadows"))
     implementation(project(":plugins:gltf-layer"))
     implementation(project(":plugins:heatmap-layer"))
     implementation(project(":plugins:rectangle-layer"))

@@ -13,7 +13,6 @@ objc_library(
         "UIKit",
     ],
     deps = [
-        "//plugins/fill-extrusion-shadows:FillExtrusionShadows",
         "//plugins/gltf-layer:GltfLayer",
         "//plugins/rectangle-layer:RectangleLayer",
         "@maplibre//platform:ios-sdk",
@@ -21,13 +20,12 @@ objc_library(
 )
 
 ios_application(
-    name = "FillExtrusionShadowsDemo",
-    bundle_id = "org.maplibre.plugins.fill-extrusion-shadows.demo",
+    name = "PluginGallery",
+    bundle_id = "org.maplibre.plugins.gallery",
     families = ["iphone"],
     infoplists = ["Info.plist"],
     minimum_os_version = "14.0",
     resources = [
-        "//:liberty_shadow_style",
         "//:positron_gltf_style",
         "//:rectangle_style",
     ],

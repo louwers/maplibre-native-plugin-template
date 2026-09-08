@@ -2,6 +2,7 @@ name: Plugin render tests
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   linux:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: Shared ${{ matrix.backend }} runner
     runs-on: ubuntu-24.04
     strategy:
@@ -76,6 +78,7 @@ jobs:
           if-no-files-found: ignore
 
   metal:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: Shared Metal runner
     runs-on: macos-15
     steps:

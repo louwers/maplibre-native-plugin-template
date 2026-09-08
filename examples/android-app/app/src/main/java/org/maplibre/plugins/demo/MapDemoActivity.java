@@ -1,4 +1,4 @@
-package org.maplibre.plugins.shadows.demo;
+package org.maplibre.plugins.demo;
 
 import android.app.Activity;
 import android.os.Bundle;

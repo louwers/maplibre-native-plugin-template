@@ -1,20 +1,26 @@
 # MapLibre Native plugin template
 
-This is an independent repository for native plugins that either extend existing MapLibre style layers or register new source-bound layer types at runtime. It does not include or patch MapLibre Native source code.
+Independent, source-bound MapLibre Native layer plugins for Android (OpenGL and
+Vulkan) and iOS/macOS (Metal). Plugins register new layer types through a C API;
+they do not patch the core or add properties to built-in layers.
 
-The first plugin, `plugins/fill-extrusion-shadows`, registers the constant paint property `fill-extrusion-shadow` for `fill-extrusion` layers and renders projected shadows using geometry borrowed from the host for the duration of each callback. Its implementation is split into `shared`, `android`, and `ios` source trees; platform wrappers do not duplicate descriptor or lifecycle code.
+- [GLTF](plugins/gltf-layer/README.md): point-anchored GLB meshes loaded through
+  MapLibre's file source and parsed with TinyGLTF.
+- [Rectangle](plugins/rectangle-layer/README.md): point markers with dynamic size,
+  color, and stroke; the smallest complete drawable-layer example.
+- [Hillshade](plugins/hillshade-layer/README.md): RasterDEM-backed
+  `org.maplibre.hillshade`, with the built-in hillshade render fixtures.
+- [Heatmap](plugins/heatmap-layer/README.md): geometry-backed
+  `org.maplibre.heatmap`, with the built-in heatmap render fixtures.
 
-`plugins/gltf-layer` registers the source-bound style layer type `gltf`. It loads GLB data through MapLibre's file loader during layout, parses static meshes with the pinned TinyGLTF submodule, and creates host-owned drawables using plugin-registered OpenGL, Vulkan, and Metal shaders. See its [style example](plugins/gltf-layer/README.md).
+Each plugin separates shared C++ layout, properties, and shader sources from its
+Android JNI/Java and iOS Objective-C wrappers. The host owns all GPU resources.
+See [the interface design](designs/plugin-interface.md) for ownership and limits.
 
-`plugins/rectangle-layer` is the minimal source-bound example. Point features become screen-space rectangles with expression-capable fill, size, and stroke properties. Its render-test directory demonstrates how an independent plugin registers itself before delegating fixtures to MapLibre's standard render-test harness.
+## Android with JitPack
 
-`plugins/hillshade-layer` registers the RasterDEM-backed type `org.maplibre.hillshade`. It reproduces the built-in hillshade layer through a host-owned two-pass render graph and explicit OpenGL, Vulkan, and Metal shader resources; the built-in `hillshade` type remains unchanged.
-
-`plugins/heatmap-layer` registers the geometry-backed type `org.maplibre.heatmap`. It reproduces the built-in heatmap layer with host-owned point buckets, a half-resolution floating-point render target, additive density rendering, and color-ramp compositing; the built-in `heatmap` type remains unchanged.
-
-## Consume on Android with JitPack
-
-Choose exactly one plugin-enabled MapLibre renderer and add JitPack after your normal repositories:
+Use a matching plugin-enabled MapLibre snapshot. Select exactly one renderer;
+plugin POMs deliberately do not pull in MapLibre transitively.
 
 ```kotlin
 dependencyResolutionManagement {
@@ -22,112 +28,86 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("https://jitpack.io") {
-            content {
-                includeGroup("com.github.louwers")
-            }
+            content { includeGroup("com.github.louwers.maplibre-native-plugin-template") }
         }
     }
 }
-```
 
-```kotlin
 dependencies {
-    implementation("org.maplibre.gl:android-sdk-opengl:<plugin-enabled-maplibre-version>")
-    implementation("com.github.louwers.maplibre-native-plugin-template:fill-extrusion-shadows:<version>")
-    // or: implementation("com.github.louwers.maplibre-native-plugin-template:gltf-layer:<version>")
-    // or: implementation("com.github.louwers.maplibre-native-plugin-template:rectangle-layer:<version>")
-    // or: implementation("com.github.louwers.maplibre-native-plugin-template:hillshade-layer:<version>")
-    // or: implementation("com.github.louwers.maplibre-native-plugin-template:heatmap-layer:<version>")
+    implementation("org.maplibre.gl:android-sdk-opengl:<matching-maplibre-version>")
+    implementation("com.github.louwers.maplibre-native-plugin-template:rectangle-layer:<version-or-commit>")
 }
 ```
 
-Register before constructing or loading a style that contains the property:
+Register before loading a style containing the new type:
 
 ```kotlin
-FillExtrusionShadowsPlugin.register()
-layer.setProperties(FillExtrusionShadows.fillExtrusionShadow(true))
-
-// For a style containing a `gltf` layer:
-GltfLayerPlugin.register()
-
-// For a raster-dem style layer whose type is `org.maplibre.hillshade`:
-HillshadeLayerPlugin.register()
-
-// For a geometry style layer whose type is `org.maplibre.heatmap`:
-HeatmapLayerPlugin.register()
+RectangleLayerPlugin.register()
+// Then load a style with type "rectangle" and a GeoJSON/vector source.
 ```
 
-The selected MapLibre artifact must contain plugin ABI v1. The plugin POM does not select a renderer transitively.
+Other artifact names are `gltf-layer`, `hillshade-layer`, and `heatmap-layer`.
+Their registration wrappers are `GltfLayerPlugin`, `HillshadeLayerPlugin`, and
+`HeatmapLayerPlugin`. This development API is not available in ordinary released
+MapLibre SDKs; compile the plugins and host from matching revisions.
 
-## Consume on iOS with Swift Package Manager
+## iOS with Swift Package Manager
 
-Add `https://github.com/louwers/maplibre-native-plugin-template` as a package dependency and select the `FillExtrusionShadows`, `GltfLayer`, `HeatmapLayer`, `HillshadeLayer`, and/or `RectangleLayer` product. Link it alongside a MapLibre build that contains plugin ABI v1, then register each plugin before constructing or loading a dependent style:
+Add `https://github.com/louwers/maplibre-native-plugin-template` as a package
+dependency. Select `GltfLayer`, `RectangleLayer`, `HillshadeLayer`, or `HeatmapLayer`
+and link a matching plugin-enabled MapLibre build.
 
 ```swift
-import FillExtrusionShadows
-import GltfLayer
 import RectangleLayer
-import HillshadeLayer
-import HeatmapLayer
-
-try FillExtrusionShadowsPlugin.registerPlugin()
-try GltfLayerPlugin.registerPlugin()
 try RectangleLayerPlugin.registerPlugin()
-try HillshadeLayerPlugin.registerPlugin()
-try HeatmapLayerPlugin.registerPlugin()
 ```
 
-Each GitHub release also includes a prebuilt XCFramework for its selected plugin for consumers that do not use Swift Package Manager.
+Products share the C-only `MapLibrePluginApi` target. Release CI checks its header
+against the selected host revision and publishes an Android AAR and an iOS
+XCFramework using each plugin's `release.json` metadata.
 
-SwiftPM products share one header-only `MapLibrePluginApi` target. Release CI compares that packaged C header byte-for-byte with the selected MapLibre Native checkout, preventing a plugin release from compiling against a stale callback or struct layout.
+## Local builds and samples
 
-## Build Android locally
+Android plugins compile against MapLibre's renderer-independent
+`android-plugin-api` Prefab artifact. Configure the Android SDK in
+`local.properties` or `ANDROID_HOME`, then:
 
-The Android plugins are independently buildable. Native compilation consumes the canonical pure-C header from MapLibre's `android-plugin-api` Prefab artifact without packaging a renderer:
-
-```shell
-./gradlew :plugins:fill-extrusion-shadows:assembleRelease \
-  -PpluginVersion=0.0.1
-
-./gradlew :plugins:gltf-layer:assembleRelease \
-  -PpluginVersion=0.1.0
-
-./gradlew :plugins:hillshade-layer:assembleRelease \
-  -PpluginVersion=0.1.0
-
-./gradlew :plugins:heatmap-layer:assembleRelease \
-  -PpluginVersion=0.1.0
+```sh
+./gradlew :plugins:rectangle-layer:assembleRelease -PmaplibreVersion=<matching-version>
+./gradlew :examples:android-app:app:installOpenglDebug -PmaplibreVersion=<matching-version>
+adb shell am start -n org.maplibre.plugins.demo/.MainActivity
 ```
 
-The app under `examples/android-app` has OpenGL and Vulkan product flavors and uses the plugin project directly. Set `maplibreVersion` to a published MapLibre version that contains plugin ABI v1 before running it.
+The gallery has separate activities for the examples. Use `installVulkanDebug`
+to select Vulkan instead. Plugin compilation uses the project sources, while the
+app's MapLibre dependency must provide the matching API.
 
-## Build and run iOS with Bazel
+The Bazel iOS sample uses the adjacent local MapLibre checkout:
 
-The iOS sample builds the shadow, GLTF, and rectangle plugins from their shared sources and uses the matching local MapLibre Native checkout through a Bazel `local_path_override`. From this repository:
-
-```shell
-bazel build --@maplibre//:renderer=metal \
-  --ios_multi_cpus=sim_arm64 \
-  //examples/ios-app:FillExtrusionShadowsDemo
+```sh
+bazel build --@maplibre//:renderer=metal --ios_multi_cpus=sim_arm64 \
+  //examples/ios-app:PluginGallery
+xcrun simctl install booted \
+  bazel-bin/examples/ios-app/PluginGallery_archive-root/Payload/PluginGallery.app
+xcrun simctl launch booted org.maplibre.plugins.gallery
 ```
 
-Install `bazel-bin/examples/ios-app/FillExtrusionShadowsDemo_archive-root/Payload/FillExtrusionShadowsDemo.app` on a booted arm64 Simulator. The sample registers all plugins before creating `MLNMapView`. Its scene switcher shows the shadow-enabled Liberty style in Berlin, the remotely loaded Eiffel Tower GLB in Paris, and the source-bound rectangle layer. For deterministic launches, set `SIMCTL_CHILD_PLUGIN_SCENE` to `shadows`, `model`, or `rectangle` when invoking `xcrun simctl launch`.
-
-Validated output is checked in as `screenshots/ios-shadow-enabled.png` and `screenshots/ios-shadow-disabled.png`; the map viewport comparison changes 32,967 pixels along projected building footprints.
-
-The renderer Java API is compile-only and removed from the published POM. MapLibre and plugins may each use a private `c++_static` runtime; only C structs, callbacks, function pointers, and opaque handles cross the boundary. Applications select exactly one renderer artifact themselves.
+Use `--override_module=maplibre=/absolute/path/to/maplibre-native` when the host
+is elsewhere. The iOS scene selector retains the Eiffel Tower and rectangle
+examples; `SIMCTL_CHILD_PLUGIN_SCENE=model` or `rectangle` selects the initial scene.
 
 ## Render tests
 
-Render fixtures and committed `expected.png` images live with the plugin that owns them under `plugins/<plugin>/render-tests`. One repository-level executable registers the linked plugins, discovers every available manifest, and runs MapLibre Native's standard render-test harness for each suite. Build and run the Metal configuration with:
+Fixtures and reviewed `expected.png` images belong to their plugin under
+`plugins/<plugin>/render-tests`. A shared executable discovers all manifests and
+delegates to MapLibre's standard render-test harness; there are no per-plugin
+branches or exclusions in the runner.
 
-```shell
+```sh
 bazel build --@maplibre//:renderer=metal //:render_tests_metal
 ./bazel-bin/render_tests_metal --plugin-test-root "$PWD"
 ```
 
-See [render-tests/README.md](render-tests/README.md) for filtering, rebaselining, and the portable Linux target. The same commands run in the `Plugin render tests` workflow.
-
-See [designs/plugin-interface.md](designs/plugin-interface.md) for the API contract and lifecycle. Each plugin has a `release.json`; the `Release plugin` workflow uses that metadata to build the selected Android AAR and iOS XCFramework without plugin-specific workflow branches.
-
-The C interface currently supports source-bound geometry layers, RasterDEM render graphs, and existing-layer extensions; it is not a source-compatible replacement for the removed C++ `CustomDrawableLayer`. See [Current limitations after CustomDrawableLayer removal](designs/plugin-interface.md#current-limitations-after-customdrawablelayer-removal) for the unsupported source-less, mutable-drawable, texture-upload, and programmatic-construction use cases and their current alternatives.
+See [render-tests/README.md](render-tests/README.md) for the OpenGL/Vulkan CMake
+targets, filtering, and baseline review. Draft PRs skip expensive render jobs;
+marking them ready starts normal CI.
