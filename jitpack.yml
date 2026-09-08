@@ -5,3 +5,4 @@ before_install:
   - yes | sdkmanager "ndk;28.2.13676358" "cmake;3.22.1"
 
 install:
+  - bash scripts/jitpack-build.sh

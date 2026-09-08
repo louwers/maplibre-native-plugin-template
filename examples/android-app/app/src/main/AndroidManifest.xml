@@ -16,6 +16,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".NgonDemoActivity" android:exported="false" />
         <activity android:name=".GltfDemoActivity" android:exported="false" />
         <activity android:name=".RectangleDemoActivity" android:exported="false" />
         <activity android:name=".HeatmapDemoActivity" android:exported="false" />

@@ -8,6 +8,12 @@ filegroup(
 )
 
 filegroup(
+    name = "ngon_style",
+    srcs = ["examples/android-app/app/src/main/assets/ngon-style.json"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "rectangle_style",
     srcs = ["examples/android-app/app/src/main/assets/rectangle-style.json"],
     visibility = ["//visibility:public"],

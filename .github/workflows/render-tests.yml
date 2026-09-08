@@ -31,11 +31,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Read pinned MapLibre revision
+        id: native
+        run: echo "revision=$(tr -d '\n' < native-revision.txt)" >> "$GITHUB_OUTPUT"
+
       - name: Check out plugin-enabled MapLibre Native
         uses: actions/checkout@v4
         with:
-          repository: louwers/maplibre-native
-          ref: cross-platform-plugin-api
+          repository: maplibre/maplibre-native
+          ref: ${{ steps.native.outputs.revision }}
           path: maplibre-native
           submodules: recursive
 
@@ -86,11 +90,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Read pinned MapLibre revision
+        id: native
+        run: echo "revision=$(tr -d '\n' < native-revision.txt)" >> "$GITHUB_OUTPUT"
+
       - name: Check out plugin-enabled MapLibre Native
         uses: actions/checkout@v4
         with:
-          repository: louwers/maplibre-native
-          ref: cross-platform-plugin-api
+          repository: maplibre/maplibre-native
+          ref: ${{ steps.native.outputs.revision }}
           path: maplibre-native
           submodules: recursive
 

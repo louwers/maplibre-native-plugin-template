@@ -6,6 +6,8 @@ they do not patch the core or add properties to built-in layers.
 
 - [GLTF](plugins/gltf-layer/README.md): point-anchored GLB meshes loaded through
   MapLibre's file source and parsed with TinyGLTF.
+- [N-gon](plugins/ngon-layer/README.md): regular convex markers with thirteen
+  fully data-driven paint properties, rotation, and map/viewport alignment.
 - [Rectangle](plugins/rectangle-layer/README.md): point markers with dynamic size,
   color, and stroke; the smallest complete drawable-layer example.
 - [Hillshade](plugins/hillshade-layer/README.md): RasterDEM-backed
@@ -46,15 +48,15 @@ RectangleLayerPlugin.register()
 // Then load a style with type "rectangle" and a GeoJSON/vector source.
 ```
 
-Other artifact names are `gltf-layer`, `hillshade-layer`, and `heatmap-layer`.
-Their registration wrappers are `GltfLayerPlugin`, `HillshadeLayerPlugin`, and
+Other artifact names are `ngon-layer`, `gltf-layer`, `hillshade-layer`, and `heatmap-layer`.
+Their registration wrappers are `NgonLayerPlugin`, `GltfLayerPlugin`, `HillshadeLayerPlugin`, and
 `HeatmapLayerPlugin`. This development API is not available in ordinary released
 MapLibre SDKs; compile the plugins and host from matching revisions.
 
 ## iOS with Swift Package Manager
 
 Add `https://github.com/louwers/maplibre-native-plugin-template` as a package
-dependency. Select `GltfLayer`, `RectangleLayer`, `HillshadeLayer`, or `HeatmapLayer`
+dependency. Select `NgonLayer`, `GltfLayer`, `RectangleLayer`, `HillshadeLayer`, or `HeatmapLayer`
 and link a matching plugin-enabled MapLibre build.
 
 ```swift
@@ -65,6 +67,11 @@ try RectangleLayerPlugin.registerPlugin()
 Products share the C-only `MapLibrePluginApi` target. Release CI checks its header
 against the selected host revision and publishes an Android AAR and an iOS
 XCFramework using each plugin's `release.json` metadata.
+
+`native-revision.txt` pins the matching host for release CI, render CI, and JitPack.
+JitPack builds the thin C API locally and publishes every plugin module. It does
+not publish or bundle a MapLibre renderer; applications still select one matching
+SDK. These changes configure publication, but do not create a new plugin release.
 
 ## Local builds and samples
 
@@ -94,7 +101,8 @@ xcrun simctl launch booted org.maplibre.plugins.gallery
 
 Use `--override_module=maplibre=/absolute/path/to/maplibre-native` when the host
 is elsewhere. The iOS scene selector retains the Eiffel Tower and rectangle
-examples; `SIMCTL_CHILD_PLUGIN_SCENE=model` or `rectangle` selects the initial scene.
+examples and adds n-gons; `SIMCTL_CHILD_PLUGIN_SCENE=model`, `rectangle`, or `ngon`
+selects the initial scene.
 
 ## Render tests
 

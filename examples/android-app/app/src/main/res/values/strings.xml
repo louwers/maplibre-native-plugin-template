@@ -4,7 +4,7 @@
     <string name="gallery_eyebrow">Native C plugin API</string>
     <string name="gallery_title">Plugin Gallery</string>
     <string name="gallery_subtitle">Explore source-bound layers implemented outside MapLibre Native.</string>
-    <string name="gallery_footer">OpenGL demo • arm64</string>
+    <string name="gallery_footer">Cross-platform plugin examples</string>
     <string name="back_to_gallery">Back to plugin gallery</string>
     <string name="gltf_title">Eiffel Tower GLTF</string>
     <string name="gltf_description">Load and render a remote GLB model</string>
@@ -14,4 +14,6 @@
     <string name="animate_zoom_out">Animate zoom 16 → 10</string>
     <string name="heatmap_title">Heatmap layer</string>
     <string name="heatmap_description">Two-pass density rendering from GeoJSON points</string>
+    <string name="ngon_title">N-gon layer</string>
+    <string name="ngon_description">Feature-driven polygons, rotation, strokes, and zoom interpolation</string>
 </resources>

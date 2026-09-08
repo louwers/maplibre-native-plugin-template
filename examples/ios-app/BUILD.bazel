@@ -15,6 +15,7 @@ objc_library(
     deps = [
         "//plugins/gltf-layer:GltfLayer",
         "//plugins/rectangle-layer:RectangleLayer",
+        "//plugins/ngon-layer:NgonLayer",
         "@maplibre//platform:ios-sdk",
     ],
 )
@@ -28,6 +29,7 @@ ios_application(
     resources = [
         "//:positron_gltf_style",
         "//:rectangle_style",
+        "//:ngon_style",
     ],
     visibility = ["//visibility:public"],
     deps = [":app_sources"],

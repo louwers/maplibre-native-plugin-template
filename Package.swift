@@ -25,6 +25,10 @@ let package = Package(
             name: "RectangleLayer",
             targets: ["RectangleLayer"]
         ),
+        .library(
+            name: "NgonLayer",
+            targets: ["NgonLayer"]
+        ),
     ],
     targets: [
         .target(
@@ -130,6 +134,29 @@ let package = Package(
             cxxSettings: [
                 .headerSearchPath("shared/include"),
                 .define("MLN_RECTANGLE_PLUGIN_VERSION", to: "\"0.1.0\""),
+            ],
+            linkerSettings: [
+                .linkedFramework("Foundation"),
+            ]
+        ),
+        .target(
+            name: "NgonLayer",
+            dependencies: ["MapLibrePluginApi"],
+            path: "plugins/ngon-layer",
+            exclude: [
+                "BUILD.bazel",
+                "README.md",
+                "android",
+                "render-tests", "scripts", "tests", "release.json", "build.gradle.kts",
+            ],
+            sources: [
+                "ios/src/NgonLayer.mm",
+                "shared/cpp/ngon_layer.cpp",
+            ],
+            publicHeadersPath: "ios/include",
+            cxxSettings: [
+                .headerSearchPath("shared/include"),
+                .define("MLN_NGON_PLUGIN_VERSION", to: "\"0.1.0\""),
             ],
             linkerSettings: [
                 .linkedFramework("Foundation"),

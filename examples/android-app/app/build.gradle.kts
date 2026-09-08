@@ -32,6 +32,7 @@ android {
 dependencies {
     "openglImplementation"("org.maplibre.gl:android-sdk-opengl:${maplibreVersion.get()}")
     "vulkanImplementation"("org.maplibre.gl:android-sdk-vulkan:${maplibreVersion.get()}")
+    implementation(project(":plugins:ngon-layer"))
     implementation(project(":plugins:gltf-layer"))
     implementation(project(":plugins:heatmap-layer"))
     implementation(project(":plugins:rectangle-layer"))
