@@ -53,7 +53,7 @@ typedef struct mln_plugin_property_descriptor_v1 {
 
 Core inspects expression dependencies after parsing and rejects a value whose dependencies exceed the descriptor. `COMPOSITE` means simultaneous camera/zoom and feature dependence. `FEATURE_STATE` requires a feature ID in the source data.
 
-Initially, host-bound data-driven values are limited to boolean, float, float2, and color. Strings and arrays may use constants or camera expressions in plugin-managed uniform blocks. Color ramps remain host-generated textures.
+Host-bound data-driven values support boolean, float, float2, color, and declared enum strings. Other strings and arrays may use constants or camera expressions in plugin-managed uniform blocks. Color ramps remain host-generated textures.
 
 ## Declarative shader property bindings
 
@@ -64,7 +64,8 @@ typedef enum mln_plugin_property_encoding_v1 {
     MLN_PLUGIN_PROPERTY_ENCODING_FLOAT,
     MLN_PLUGIN_PROPERTY_ENCODING_FLOAT2,
     MLN_PLUGIN_PROPERTY_ENCODING_COLOR,
-    MLN_PLUGIN_PROPERTY_ENCODING_BOOLEAN_FLOAT
+    MLN_PLUGIN_PROPERTY_ENCODING_BOOLEAN_FLOAT,
+    MLN_PLUGIN_PROPERTY_ENCODING_ENUM_FLOAT
 } mln_plugin_property_encoding_v1;
 
 typedef struct mln_plugin_shader_property_binding_v1 {
@@ -87,6 +88,19 @@ typedef struct mln_plugin_shader_property_binding_v1 {
 ```
 
 The shader descriptor owns an array of these bindings. Registration validates property names, value encodings, attribute IDs, std140/Metal alignment, uniform bounds, and non-overlapping byte ranges.
+
+Equal minimum/maximum attribute IDs explicitly request packed endpoints. Scalar,
+boolean and enum pairs occupy one float2 attribute; float2 pairs occupy one
+float4. Color endpoints still require two float4 attributes. The encoding does
+not change the property value or uniform representation.
+
+`ENUM_FLOAT` encodes the ordinal in the property's copied `enum_values` list.
+Shaders select an enum endpoint rather than linearly blending ordinals. Enum
+statistics return strings owned by the descriptor, never temporary evaluation
+storage. Unknown feature values fall back to the declared default. Together with
+packed endpoints this lets all thirteen n-gon properties be feature-driven within
+the shared sixteen-attribute limit. Registration rejects out-of-range attribute
+IDs/locations and incompatible packed types before shader compilation.
 
 Core compiles and caches a shader permutation based on the set of properties represented as uniforms. It injects a numeric macro for each binding:
 

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
 project(maplibre-native-plugin-render-tests LANGUAGES C CXX)
+enable_testing()
 
 set(MAPLIBRE_NATIVE_SOURCE_DIR "" CACHE PATH "Path to a plugin-enabled MapLibre Native checkout")
 if(NOT MAPLIBRE_NATIVE_SOURCE_DIR)
@@ -11,11 +12,14 @@ if(NOT EXISTS "${MAPLIBRE_NATIVE_SOURCE_DIR}/CMakeLists.txt")
     message(FATAL_ERROR "MAPLIBRE_NATIVE_SOURCE_DIR does not contain MapLibre Native")
 endif()
 
-if(NOT MLN_WITH_OPENGL AND NOT MLN_WITH_VULKAN)
-    message(FATAL_ERROR "Plugin render tests require MLN_WITH_OPENGL=ON or MLN_WITH_VULKAN=ON")
-endif()
-if(MLN_WITH_OPENGL AND MLN_WITH_VULKAN)
-    message(FATAL_ERROR "Select exactly one plugin render-test backend")
+set(plugin_backend_count 0)
+foreach(backend OPENGL VULKAN METAL)
+    if(MLN_WITH_${backend})
+        math(EXPR plugin_backend_count "${plugin_backend_count} + 1")
+    endif()
+endforeach()
+if(NOT plugin_backend_count EQUAL 1)
+    message(FATAL_ERROR "Select exactly one plugin backend: MLN_WITH_OPENGL, MLN_WITH_VULKAN, or MLN_WITH_METAL")
 endif()
 
 set(MLN_WITH_GLFW OFF CACHE BOOL "" FORCE)

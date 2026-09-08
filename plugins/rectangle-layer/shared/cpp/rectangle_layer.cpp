@@ -215,10 +215,11 @@ bool segmentIntersectsRectangle(double x0,
 uint8_t queryFeature(const mln_plugin_feature_v1* feature,
                      const mln_plugin_tile_point_v1* query,
                      size_t queryCount,
-                     double pixelsToTileUnits,
+                     const mln_plugin_query_context_v1* context,
                      const mln_plugin_property_value_v1* properties,
                      size_t propertyCount) {
-    if (!feature || !feature->points || !query || !queryCount) return 0;
+    if (!feature || !feature->points || !query || !queryCount || !context) return 0;
+    const auto pixelsToTileUnits = context->pixels_to_tile_units;
     float width = 10.0f;
     float height = 10.0f;
     float strokeWidth = 0.0f;

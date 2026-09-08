@@ -70,6 +70,10 @@ and interpolation-factor ranges. The host evaluates feature values and
 composite zoom endpoints, refreshes feature-state ranges, and supplies current
 camera interpolation factors. Shader variants replace constant attributes with
 uniforms. Tile geometry does not rebuild merely because paint values change.
+Scalar/boolean/enum endpoint pairs may share a float2 attribute; float2 endpoints
+may share a float4 attribute. Declared enum strings have an explicit ordinal
+encoding, so map/viewport options can also be feature-driven. The host validates
+attribute IDs against the portable sixteen-attribute limit.
 See [dynamic-property-binders.md](dynamic-property-binders.md).
 
 ## Layout and ownership
@@ -107,6 +111,10 @@ are rejected at registration, not silently ignored.
   meshes. The host owns its drawables and depth state. Textures, animation,
   skinning, morph targets, and compressed geometry are not implemented.
 - `rectangle` uses point quads and host dynamic bindings for size, fill, and stroke.
+- `ngon` uses analytic convex-polygon coverage with thirteen simultaneously
+  data-driven properties. Packed endpoints leave room for rotation, corners,
+  translation, and both pitch options. Query callbacks receive the same borrowed
+  tile projection and camera distance needed to test the actual rotated polygon.
 - `org.maplibre.hillshade` samples DEMs into derivatives, then composites shaded
   masked tiles. Its fixtures are ported from the retained built-in hillshade.
 - `org.maplibre.heatmap` accumulates point density into a half-size float target,
@@ -127,3 +135,18 @@ or independent per-object animation/material state. Reserved source kinds not
 implemented by the host are rejected. Use built-in layers and GeoJSON/custom
 sources where possible. The separate backend-direct `CustomLayer` API remains
 available; removing `CustomDrawableLayer` did not remove it.
+
+## Simplification decisions
+
+The existing-layer extension host, borrowed extrusion packets, raw graphics
+contexts, generated-layer property fallbacks, and shadow renderer are removed.
+Factory-owned immutable type identity replaces structural type comparisons.
+Shared shader generation keeps the n-gon projection and coverage algorithm in one
+place while emitting backend-specific syntax. The render runner remains unaware
+of individual plugin semantics and discovers their fixtures from manifests.
+
+Keep explicit resource layouts, typed property capabilities, geometry/raster-DEM
+adapters, and render graphs: the retained GLTF, rectangle, hillshade, and heatmap
+plugins need them. Do not replace these with backend callbacks or plugin-specific
+host branches. General layout sort keys, collision placement, arbitrary images,
+and per-object animation need separate designs rather than implicit fallbacks.

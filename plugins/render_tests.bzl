@@ -9,6 +9,7 @@ RENDER_TEST_PLUGIN_PACKAGES = [
     "gltf-layer",
     "heatmap-layer",
     "hillshade-layer",
+    "ngon-layer",
     "rectangle-layer",
 ]
 

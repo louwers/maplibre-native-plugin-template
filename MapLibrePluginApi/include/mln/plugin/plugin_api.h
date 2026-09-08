@@ -278,7 +278,9 @@ typedef enum mln_plugin_property_encoding_v1 {
     MLN_PLUGIN_PROPERTY_ENCODING_FLOAT = 1,
     MLN_PLUGIN_PROPERTY_ENCODING_FLOAT2 = 2,
     MLN_PLUGIN_PROPERTY_ENCODING_COLOR = 3,
-    MLN_PLUGIN_PROPERTY_ENCODING_BOOLEAN_FLOAT = 4
+    MLN_PLUGIN_PROPERTY_ENCODING_BOOLEAN_FLOAT = 4,
+    /* Zero-based index into the property descriptor enum_values. */
+    MLN_PLUGIN_PROPERTY_ENCODING_ENUM_FLOAT = 5
 } mln_plugin_property_encoding_v1;
 
 /*
@@ -286,6 +288,9 @@ typedef enum mln_plugin_property_encoding_v1 {
  * either through the uniform block range or through the minimum/maximum vertex
  * attributes. Composite expressions use both attributes plus the interpolation
  * factor. Source-only expressions write equal minimum and maximum values.
+ * Equal minimum/maximum attribute IDs pack both endpoints into one float2
+ * (scalar/boolean/enum) or float4 (float2) attribute. Color needs two float4
+ * attributes. Enum endpoints must be selected, never linearly interpolated.
  */
 typedef struct mln_plugin_shader_property_binding_v1 {
     uint32_t struct_size;
@@ -444,6 +449,8 @@ typedef struct mln_plugin_uniform_context_v1 {
     uint32_t render_target_width;
     uint32_t render_target_height;
     float pixels_to_tile_units;
+    float camera_to_center_distance;
+    float pixel_ratio;
     /* Column-major matrix mapping normalized viewport coordinates. */
     float viewport_matrix[16];
     const mln_plugin_property_value_v1* properties;
@@ -566,14 +573,24 @@ typedef mln_plugin_status (*mln_plugin_layout_feature_fn)(void* layout_instance,
 typedef mln_plugin_status (*mln_plugin_finish_layout_fn)(void* layout_instance, mln_plugin_bucket_v1* bucket);
 typedef void (*mln_plugin_destroy_layout_fn)(void* layout_instance);
 
-/*
- * Optional exact hit test. query_x/query_y and feature geometry are in tile
- * coordinates; pixels_to_tile_units converts the bucket query radius.
- */
+/* Borrowed inputs for a rendered-feature hit test. Bearing is in radians;
+ * viewport dimensions and pixel distances are logical pixels. */
+typedef struct mln_plugin_query_context_v1 {
+    uint32_t struct_size;
+    double pixels_to_tile_units;
+    double camera_to_center_distance;
+    double bearing;
+    double tile_matrix[16];
+    uint32_t viewport_width;
+    uint32_t viewport_height;
+} mln_plugin_query_context_v1;
+
+/* Optional exact hit test. Query and feature geometry use tile coordinates.
+ * Use the projection context for pitch, translation, and viewport-aligned marks. */
 typedef uint8_t (*mln_plugin_query_feature_fn)(const mln_plugin_feature_v1* feature,
                                                const mln_plugin_tile_point_v1* query_geometry,
                                                size_t query_geometry_count,
-                                               double pixels_to_tile_units,
+                                               const mln_plugin_query_context_v1* context,
                                                const mln_plugin_property_value_v1* properties,
                                                size_t property_count);
 
