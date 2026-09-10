@@ -13,8 +13,6 @@ git -C "$native_checkout" init --quiet
 git -C "$native_checkout" remote add origin https://github.com/maplibre/maplibre-native.git
 git -C "$native_checkout" fetch --depth=1 origin "$native_revision"
 git -C "$native_checkout" checkout --detach FETCH_HEAD
-diff -u "$native_checkout/include/mln/plugin/plugin_api.h" \
-    "$plugin_root/MapLibrePluginApi/include/mln/plugin/plugin_api.h"
 api_version="0.0.0-plugin-${native_revision:0:12}-SNAPSHOT"
 "$native_checkout/platform/android/gradlew" -p "$native_checkout/platform/android" \
     :android-plugin-api:publishReleasePublicationToMavenLocal -PmaplibreVersion="$api_version"

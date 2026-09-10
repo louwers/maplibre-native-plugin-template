@@ -50,11 +50,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Verify and publish the C plugin API locally
+      - name: Publish the C plugin API locally
         run: |
-          diff -u \
-            maplibre-native/include/mln/plugin/plugin_api.h \
-            MapLibrePluginApi/include/mln/plugin/plugin_api.h
           MAPLIBRE_VERSION="0.0.0-plugin-$(git -C maplibre-native rev-parse --short=12 HEAD)-SNAPSHOT"
           echo "MAPLIBRE_VERSION=$MAPLIBRE_VERSION" >> "$GITHUB_ENV"
           maplibre-native/platform/android/gradlew \
@@ -113,12 +110,6 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-
-      - name: Verify packaged C API header
-        run: >-
-          diff -u
-          maplibre-native/include/mln/plugin/plugin_api.h
-          MapLibrePluginApi/include/mln/plugin/plugin_api.h
 
       - name: Build iOS plugin
         env:

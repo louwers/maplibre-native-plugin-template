@@ -1,6 +1,6 @@
 .target(
             name: "RectangleLayer",
-            dependencies: ["MapLibrePluginApi"],
+            dependencies: [.product(name: "MapLibrePluginApi", package: "maplibre-native")],
             path: "plugins/rectangle-layer",
             exclude: [
                 "BUILD.bazel",

@@ -1,6 +1,6 @@
 .target(
             name: "NgonLayer",
-            dependencies: ["MapLibrePluginApi"],
+            dependencies: [.product(name: "MapLibrePluginApi", package: "maplibre-native")],
             path: "plugins/ngon-layer",
             exclude: [
                 "BUILD.bazel",

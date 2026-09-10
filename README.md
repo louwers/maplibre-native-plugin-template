@@ -17,7 +17,6 @@ JNI/Java and iOS Objective-C wrappers. The host owns all GPU resources.
 - `plugins/<plugin>/android` and `ios`: platform wrappers.
 - `plugins/<plugin>/render-tests`: fixtures and reviewed expected images.
 - `examples/`: platform sample applications.
-- `MapLibrePluginApi/`: shared C-only API target.
 
 Architecture designs live in MapLibre Native under `design-proposals/plugin-api/`.
 
@@ -65,7 +64,7 @@ Set `-PmaplibreVersion=<matching-version>` and, when needed,
 
 Add `https://github.com/louwers/maplibre-native-plugin-template` as a Swift Package
 Manager dependency. Each plugin README identifies its product, import, registration
-API, and Bazel build target. Products share the C-only `MapLibrePluginApi` target.
+API, and Bazel build target. Products depend on the C-only `MapLibrePluginApi` product from MapLibre Native.
 
 For Bazel builds, the sample uses the adjacent local MapLibre checkout. See
 [Developing the native plugin API locally](#developing-the-native-plugin-api-locally)
@@ -89,7 +88,7 @@ git -C "$native_root" submodule update --init --recursive
 git submodule update --init --recursive
 ```
 
-### Edit the host and synchronize the C header
+### Edit the host API
 
 The public contract lives in `include/mln/plugin/plugin_api.h` in MapLibre Native.
 Host registration, factories, and shader adapters live under `src/mln/plugin/`;
@@ -97,19 +96,21 @@ render integration lives in `src/mln/renderer/layers/render_plugin_style_layer.*
 and `plugin_layer_tweaker.*`. Change the host implementation and plugin callers
 together, keeping the boundary pure C.
 
-When the public header changes, update the copy used by this repository's
-SwiftPM API target and publication checks:
+There is no copied API header in this repository. Android consumes it through
+the MapLibre Prefab API artifact; Bazel consumes the host's plugin API target.
+SwiftPM consumes MapLibre Native's `MapLibrePluginApi` product at the revision in
+`native-revision.txt`. That revision must include the host's Swift package manifest.
+For local SwiftPM development, select your checkout explicitly:
 
 ```sh
-cp "$native_root/include/mln/plugin/plugin_api.h" \
-  "$plugin_root/MapLibrePluginApi/include/mln/plugin/plugin_api.h"
-diff -u "$native_root/include/mln/plugin/plugin_api.h" \
-  "$plugin_root/MapLibrePluginApi/include/mln/plugin/plugin_api.h"
+MAPLIBRE_NATIVE_PATH="$native_root" swift build --target MapLibrePluginApi
 ```
 
-Android gets its header from the rebuilt Prefab artifact, not directly from this
-copy. Rebuild both the SDK and plugins after changing the contract; replacing
-only the header or only one native library can leave incompatible binaries.
+Use the same environment variable when building any plugin target. In Xcode,
+add the local MapLibre Native package as an override for the remote dependency.
+The API product supplies only the C contract, not a renderer: applications must
+still link a matching MapLibre SDK. Rebuild both SDK and plugins after changing
+the contract; replacing only one native library can leave incompatible binaries.
 
 ### Android: publish matching artifacts locally
 

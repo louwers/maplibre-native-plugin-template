@@ -1,6 +1,6 @@
 .target(
             name: "HeatmapLayer",
-            dependencies: ["MapLibrePluginApi"],
+            dependencies: [.product(name: "MapLibrePluginApi", package: "maplibre-native")],
             path: "plugins/heatmap-layer",
             exclude: [
                 "BUILD.bazel",

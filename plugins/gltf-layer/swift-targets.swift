@@ -11,7 +11,7 @@
         ),
 .target(
             name: "GltfLayer",
-            dependencies: ["MapLibrePluginApi", "TinyGLTF"],
+            dependencies: [.product(name: "MapLibrePluginApi", package: "maplibre-native"), "TinyGLTF"],
             path: "plugins/gltf-layer",
             exclude: [
                 "BUILD.bazel",

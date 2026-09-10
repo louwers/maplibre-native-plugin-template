@@ -1,6 +1,6 @@
 .target(
             name: "HillshadeLayer",
-            dependencies: ["MapLibrePluginApi"],
+            dependencies: [.product(name: "MapLibrePluginApi", package: "maplibre-native")],
             path: "plugins/hillshade-layer",
             exclude: [
                 "BUILD.bazel",
