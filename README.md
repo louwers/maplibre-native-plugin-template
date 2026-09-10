@@ -1,28 +1,43 @@
 # MapLibre Native plugin template
 
-Independent, source-bound MapLibre Native layer plugins for Android (OpenGL and
-Vulkan) and iOS/macOS (Metal). Plugins register new layer types through a C API;
-they do not patch the core or add properties to built-in layers.
+Infrastructure for independent, source-bound MapLibre Native layer plugins on
+Android (OpenGL and Vulkan) and iOS/macOS (Metal). Plugins register new layer types
+through a C API; they do not patch the core or add properties to built-in layers.
 
-- [GLTF](plugins/gltf-layer/README.md): point-anchored GLB meshes loaded through
-  MapLibre's file source and parsed with TinyGLTF.
-- [N-gon](plugins/ngon-layer/README.md): regular convex markers with thirteen
-  fully data-driven paint properties, rotation, and map/viewport alignment.
-- [Rectangle](plugins/rectangle-layer/README.md): point markers with dynamic size,
-  color, and stroke; the smallest complete drawable-layer example.
-- [Hillshade](plugins/hillshade-layer/README.md): RasterDEM-backed
-  `org.maplibre.hillshade`, with the built-in hillshade render fixtures.
-- [Heatmap](plugins/heatmap-layer/README.md): geometry-backed
-  `org.maplibre.heatmap`, with the built-in heatmap render fixtures.
+Each directory under [plugins/](plugins/) owns its implementation and README.
+Start with that plugin's README for its style schema, platform-specific dependency
+coordinates, registration API, build targets, and available examples.
 
-Each plugin separates shared C++ layout, properties, and shader sources from its
-Android JNI/Java and iOS Objective-C wrappers. The host owns all GPU resources.
-See [the interface design](designs/plugin-interface.md) for ownership and limits.
+## Repository structure
 
-## Android with JitPack
+Plugins separate shared C++ layout, properties, and shader sources from Android
+JNI/Java and iOS Objective-C wrappers. The host owns all GPU resources.
 
-Use a matching plugin-enabled MapLibre snapshot. Select exactly one renderer;
-plugin POMs deliberately do not pull in MapLibre transitively.
+- `plugins/<plugin>/shared`: cross-platform implementation.
+- `plugins/<plugin>/android` and `ios`: platform wrappers.
+- `plugins/<plugin>/render-tests`: fixtures and reviewed expected images.
+- `examples/`: platform sample applications.
+- `MapLibrePluginApi/`: shared C-only API target.
+
+Architecture designs live in MapLibre Native under `design-proposals/plugin-api/`.
+
+## Host compatibility
+
+This development API is not available in ordinary released MapLibre SDKs. Build
+plugins and the host from matching revisions. `native-revision.txt` pins the host
+used by release CI, render CI, and JitPack.
+
+On Android, select exactly one matching MapLibre renderer artifact. Plugins use
+the renderer-independent `android-plugin-api` Prefab dependency; they do not
+bundle or select a renderer. On Apple platforms, link a matching plugin-enabled
+MapLibre build alongside the selected plugin product.
+
+Always register plugins before loading a style that uses their layer types.
+Registration entry points are documented in each plugin's README.
+
+## Shared Android setup
+
+Add JitPack to the application's dependency repositories:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -34,75 +49,154 @@ dependencyResolutionManagement {
         }
     }
 }
-
-dependencies {
-    implementation("org.maplibre.gl:android-sdk-opengl:<matching-maplibre-version>")
-    implementation("com.github.louwers.maplibre-native-plugin-template:rectangle-layer:<version-or-commit>")
-}
 ```
 
-Register before loading a style containing the new type:
+Use the artifact name and registration example from the selected plugin's README.
+Choose either `org.maplibre.gl:android-sdk-opengl:<matching-maplibre-version>` or
+`org.maplibre.gl:android-sdk-vulkan:<matching-maplibre-version>` for the host.
+Configure the repository hosting that matching SDK if it is not in Maven Central.
 
-```kotlin
-RectangleLayerPlugin.register()
-// Then load a style with type "rectangle" and a GeoJSON/vector source.
-```
+For local builds, configure the Android SDK in `local.properties` or
+`ANDROID_HOME`. Commands in plugin READMEs run from this repository's root.
+Set `-PmaplibreVersion=<matching-version>` and, when needed,
+`-PmaplibreRepositoryUrl=<repository-url>` to resolve the matching host artifacts.
 
-Other artifact names are `ngon-layer`, `gltf-layer`, `hillshade-layer`, and `heatmap-layer`.
-Their registration wrappers are `NgonLayerPlugin`, `GltfLayerPlugin`, `HillshadeLayerPlugin`, and
-`HeatmapLayerPlugin`. This development API is not available in ordinary released
-MapLibre SDKs; compile the plugins and host from matching revisions.
+## Shared Apple setup
 
-## iOS with Swift Package Manager
+Add `https://github.com/louwers/maplibre-native-plugin-template` as a Swift Package
+Manager dependency. Each plugin README identifies its product, import, registration
+API, and Bazel build target. Products share the C-only `MapLibrePluginApi` target.
 
-Add `https://github.com/louwers/maplibre-native-plugin-template` as a package
-dependency. Select `NgonLayer`, `GltfLayer`, `RectangleLayer`, `HillshadeLayer`, or `HeatmapLayer`
-and link a matching plugin-enabled MapLibre build.
+For Bazel builds, the sample uses the adjacent local MapLibre checkout. See
+[Developing the native plugin API locally](#developing-the-native-plugin-api-locally)
+for checkout overrides. Plugin READMEs document available sample scenes; not
+every plugin has a gallery scene on every platform.
 
-```swift
-import RectangleLayer
-try RectangleLayerPlugin.registerPlugin()
-```
+## Developing the native plugin API locally
 
-Products share the C-only `MapLibrePluginApi` target. Release CI checks its header
-against the selected host revision and publishes an Android AAR and an iOS
-XCFramework using each plugin's `release.json` metadata.
+Use a plugin-enabled MapLibre Native checkout alongside this repository. Start
+from a compatible branch or the revision in `native-revision.txt`; an ordinary
+released SDK does not contain this API. Local builds can use uncommitted changes,
+so there is no need to publish to a remote Maven repository or make a release
+while iterating.
 
-`native-revision.txt` pins the matching host for release CI, render CI, and JitPack.
-JitPack builds the thin C API locally and publishes every plugin module. It does
-not publish or bundle a MapLibre renderer; applications still select one matching
-SDK. These changes configure publication, but do not create a new plugin release.
-
-## Local builds and samples
-
-Android plugins compile against MapLibre's renderer-independent
-`android-plugin-api` Prefab artifact. Configure the Android SDK in
-`local.properties` or `ANDROID_HOME`, then:
+Run the following from this repository's root, adjusting the native path if needed:
 
 ```sh
-./gradlew :plugins:rectangle-layer:assembleRelease -PmaplibreVersion=<matching-version>
-./gradlew :examples:android-app:app:installOpenglDebug -PmaplibreVersion=<matching-version>
+plugin_root="$PWD"
+native_root="$(cd ../maplibre-native && pwd)"
+git -C "$native_root" submodule update --init --recursive
+git submodule update --init --recursive
+```
+
+### Edit the host and synchronize the C header
+
+The public contract lives in `include/mln/plugin/plugin_api.h` in MapLibre Native.
+Host registration, factories, and shader adapters live under `src/mln/plugin/`;
+render integration lives in `src/mln/renderer/layers/render_plugin_style_layer.*`
+and `plugin_layer_tweaker.*`. Change the host implementation and plugin callers
+together, keeping the boundary pure C.
+
+When the public header changes, update the copy used by this repository's
+SwiftPM API target and publication checks:
+
+```sh
+cp "$native_root/include/mln/plugin/plugin_api.h" \
+  "$plugin_root/MapLibrePluginApi/include/mln/plugin/plugin_api.h"
+diff -u "$native_root/include/mln/plugin/plugin_api.h" \
+  "$plugin_root/MapLibrePluginApi/include/mln/plugin/plugin_api.h"
+```
+
+Android gets its header from the rebuilt Prefab artifact, not directly from this
+copy. Rebuild both the SDK and plugins after changing the contract; replacing
+only the header or only one native library can leave incompatible binaries.
+
+### Android: publish matching artifacts locally
+
+Configure `ANDROID_HOME` (or `local.properties`) and the required JDK/NDK for the
+Android builds. Use a development version shared by the host SDK and API artifact:
+
+```sh
+api_version="0.0.0-plugin-local-SNAPSHOT"
+"$native_root/platform/android/gradlew" -p "$native_root/platform/android" \
+  :android-plugin-api:publishReleasePublicationToMavenLocal \
+  :MapLibreAndroid:publishVulkanreleasePublicationToMavenLocal \
+  -PmaplibreVersion="$api_version" \
+  -Pmaplibre.abis=arm64-v8a \
+  -PpublicationRepositoryUrl="file://$plugin_root/build/local-maven"
+```
+
+These tasks publish only to the local Maven repository, normally
+`$HOME/.m2/repository`. The file-valued publication setting avoids enabling the
+Maven Central publishing/signing configuration for this development build; it
+does not redirect `publishToMavenLocal`. No remote credentials are needed.
+For OpenGL, use `publishOpenglreleasePublicationToMavenLocal` instead. Replace
+`arm64-v8a` with your device/emulator ABI as appropriate, or `all` for the SDK's
+full ABI set.
+
+Then build and install the example against those exact local artifacts:
+
+```sh
+cd "$plugin_root"
+MAPLIBRE_REPOSITORY_URL="file://$HOME/.m2/repository" ./gradlew \
+  :examples:android-app:app:installVulkanDebug \
+  -PmaplibreVersion="$api_version" \
+  -PmaplibrePluginAbis=arm64-v8a \
+  --refresh-dependencies
 adb shell am start -n org.maplibre.plugins.demo/.MainActivity
 ```
 
-The gallery has separate activities for the examples. Use `installVulkanDebug`
-to select Vulkan instead. Plugin compilation uses the project sources, while the
-app's MapLibre dependency must provide the matching API.
+Use `installOpenglDebug` with the OpenGL artifact. The example builds plugins from
+this checkout while resolving the host SDK and C API from local Maven. Republishing
+the same snapshot requires refreshing dependencies; using a fresh development
+version for each API change also avoids stale artifacts. A local Swift package
+dependency similarly uses this repository's current sources, but you must still
+build and link the matching MapLibre host separately.
 
-The Bazel iOS sample uses the adjacent local MapLibre checkout:
+### Bazel / iOS: build directly against the checkout
+
+Bazel can rebuild host and plugin source changes together without Maven artifacts.
+Override both the native module and its tile-spec submodule when using a different
+checkout location; dependency-module overrides are not inherited by the root module:
 
 ```sh
 bazel build --@maplibre//:renderer=metal --ios_multi_cpus=sim_arm64 \
+  --override_module="maplibre=$native_root" \
+  --override_module="maplibre-tile-spec=$native_root/vendor/maplibre-tile-spec" \
   //examples/ios-app:PluginGallery
-xcrun simctl install booted \
-  bazel-bin/examples/ios-app/PluginGallery_archive-root/Payload/PluginGallery.app
-xcrun simctl launch booted org.maplibre.plugins.gallery
 ```
 
-Use `--override_module=maplibre=/absolute/path/to/maplibre-native` when the host
-is elsewhere. The iOS scene selector retains the Eiffel Tower and rectangle
-examples and adds n-gons; `SIMCTL_CHILD_PLUGIN_SCENE=model`, `rectangle`, or `ngon`
-selects the initial scene.
+Use the plugin-specific library target and simulator launch instructions in its
+README when you do not need the whole gallery.
+
+### Test and share API changes
+
+Run the host's focused plugin tests as well as the plugin-owned render fixtures.
+For example, on macOS the CMake runner builds directly against your working tree:
+
+```sh
+cmake -S . -B build-api-metal -G Ninja \
+  -DMAPLIBRE_NATIVE_SOURCE_DIR="$native_root" -DMLN_WITH_METAL=ON
+cmake --build build-api-metal --target plugin-render-tests
+./build-api-metal/plugin-render-tests --plugin-test-root "$plugin_root" --recycle-map
+```
+
+See the [shared render-test guide](render-tests/README.md) for OpenGL and Vulkan.
+Repeat the local build after host changes; release CI and JitPack cannot see
+uncommitted files or local Maven artifacts. Once the host changes are committed
+and pushed, update `native-revision.txt` to that accessible commit and include
+the synchronized C header and plugin-side changes in review. Do not replace the
+release pin with a local path or an unpublished commit.
+
+## Publishing
+
+Release CI checks the C header against the selected host revision and publishes
+an Android AAR and an iOS XCFramework using each plugin's `release.json` metadata.
+The release workflow selects the plugin and version to publish.
+
+JitPack builds the thin C API locally and publishes the plugin modules. It does
+not publish or bundle a MapLibre renderer. Publication configuration alone does
+not mean a particular plugin version has been released.
 
 ## Render tests
 

@@ -21,24 +21,31 @@ abstract class MapDemoActivity extends Activity {
   protected abstract int titleResource();
   protected abstract String styleUri();
   protected abstract CameraPosition initialCamera();
+  protected int layoutResource() { return R.layout.activity_map_demo; }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.activity_map_demo);
+    setContentView(layoutResource());
 
     mapView = findViewById(R.id.map_view);
     mapView.onCreate(savedInstanceState);
-    ((TextView) findViewById(R.id.demo_title)).setText(titleResource());
-    findViewById(R.id.back_button).setOnClickListener(view -> finish());
+    TextView title = findViewById(R.id.demo_title);
+    if (title != null) title.setText(titleResource());
+    View back = findViewById(R.id.back_button);
+    if (back != null) back.setOnClickListener(view -> finish());
     actionButton = findViewById(R.id.demo_action);
-    configureAction(actionButton);
+    if (actionButton != null) configureAction(actionButton);
 
     mapView.getMapAsync(readyMap -> {
       map = readyMap;
       map.setCameraPosition(initialCamera());
-      map.setStyle(new Style.Builder().fromUri(styleUri()), this::onStyleLoaded);
+      loadStyle();
     });
+  }
+
+  protected void loadStyle() {
+    map.setStyle(new Style.Builder().fromUri(styleUri()), this::onStyleLoaded);
   }
 
   protected void configureAction(Button button) {

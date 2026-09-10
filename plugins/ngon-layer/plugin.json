@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "android": {
+    "registrationClass": "org.maplibre.plugins.ngon.NgonLayerPlugin"
+  },
+  "apple": {
+    "product": "NgonLayer",
+    "targets": "swift-targets.swift",
+    "registrationClass": "MLNNgonLayerPlugin",
+    "header": "NgonLayer/NgonLayer.h"
+  },
+  "demo": {
+    "title": "Capital Atlas",
+    "description": "Explore OpenFreeMap capitals with data-driven n-gons",
+    "androidActivity": "org.maplibre.plugins.demo.NgonDemoActivity",
+    "ios": {
+      "key": "ngon",
+      "style": "ngon-style",
+      "camera": [
+        48.8566,
+        2.3522,
+        20000,
+        0,
+        0
+      ]
+    }
+  }
+}

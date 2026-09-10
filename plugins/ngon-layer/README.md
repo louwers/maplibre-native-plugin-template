@@ -1,7 +1,7 @@
 # N-gon layer
 
 Regular convex polygons centered on GeoJSON or vector-tile Point/MultiPoint features.
-Register `NgonLayerPlugin` (Android) or `NgonLayer` (iOS) before loading the style.
+Register the plugin using the platform entry points below before loading the style.
 The style layer type is `ngon`; the plugin ID is `org.maplibre.ngon-layer`.
 
 ```json
@@ -69,3 +69,107 @@ cover corner counts/rotation, every property feature-driven simultaneously, frac
 composite zoom, feature state, runtime paint updates, tile seams/MultiPoint, blur,
 translation and all four pitch alignment/scale combinations. Expected images are
 shared across backends; backend-specific skips or baselines are not needed.
+
+## Android
+
+Follow the [shared Android setup](../../README.md#shared-android-setup) to configure
+JitPack and a matching plugin-enabled MapLibre SDK. Add this plugin's dependency:
+
+```kotlin
+dependencies {
+    implementation("org.maplibre.gl:android-sdk-opengl:<matching-maplibre-version>")
+    implementation("com.github.louwers.maplibre-native-plugin-template:ngon-layer:<version-or-commit>")
+}
+```
+
+For Vulkan, replace `android-sdk-opengl` with `android-sdk-vulkan`; do not add both.
+Initialize MapLibre, then register before loading the style:
+
+```kotlin
+import org.maplibre.android.MapLibre
+import org.maplibre.plugins.ngon.NgonLayerPlugin
+
+MapLibre.getInstance(context)
+NgonLayerPlugin.register()
+```
+
+Build the plugin from the repository root:
+
+```sh
+./gradlew :plugins:ngon-layer:assembleRelease -PmaplibreVersion=<matching-version>
+```
+
+### Android example
+
+Install the gallery and choose **Capital Atlas**:
+
+```sh
+./gradlew :examples:android-app:app:installOpenglDebug -PmaplibreVersion=<matching-version>
+adb shell am start -n org.maplibre.plugins.demo/.MainActivity
+```
+
+Use `installVulkanDebug` to run the Vulkan variant.
+
+**Capital Atlas** is the Android n-gon demonstration. It downloads OpenFreeMap's
+[Positron style](https://tiles.openfreemap.org/styles/positron) and reuses its live
+vector `place` source. The [OpenMapTiles `capital` field](https://openmaptiles.org/schema/#place)
+is an administrative level, not a boolean: level 2 is a gold hexagon, levels 3–4
+are teal pentagons, and levels 5–6 are coral diamonds. Administrative terminology
+varies by country. Colors, corners, rotation and zoom-interpolated radii are
+feature-driven; the style expressions live in
+[ngon-capitals.layers.json](../../examples/android-app/app/src/main/assets/ngon-capitals.layers.json).
+The demo is map-only: pan, zoom and tilt with the standard map gestures, without
+custom controls or overlays. More capitals become available as the provider's
+tile zoom increases. An Internet connection is required; no capital coordinates
+are hard-coded. The live device instrumentation test verifies both feature queries
+and marker-colored pixels before/after a programmatic paint-property update:
+
+```sh
+./gradlew :examples:android-app:app:connectedVulkanDebugAndroidTest \
+  -PmaplibreVersion=<matching-version> \
+  -Pandroid.testInstrumentationRunnerArguments.class=org.maplibre.plugins.demo.CapitalExplorerTest
+```
+
+## iOS / Metal
+
+Follow the [shared Apple setup](../../README.md#shared-apple-setup) and select the
+`NgonLayer` Swift Package Manager product. Link a matching plugin-enabled MapLibre
+build. Register before loading a style that uses this plugin:
+
+```swift
+import NgonLayer
+
+try NgonLayerPlugin.registerPlugin()
+```
+
+Build the iOS simulator library with Bazel from the repository root:
+
+```sh
+bazel build --@maplibre//:renderer=metal --ios_multi_cpus=sim_arm64 \
+  //plugins/ngon-layer:NgonLayer
+```
+
+### iOS example
+
+With an iOS simulator booted, build and run this plugin's gallery scene:
+
+```sh
+bazel build --@maplibre//:renderer=metal --ios_multi_cpus=sim_arm64 \
+  //examples/ios-app:PluginGallery
+xcrun simctl install booted \
+  bazel-bin/examples/ios-app/PluginGallery_archive-root/Payload/PluginGallery.app
+SIMCTL_CHILD_PLUGIN_SCENE=ngon xcrun simctl launch booted org.maplibre.plugins.gallery
+```
+
+The iOS scene uses the synthetic point-marker style; Capital Atlas is currently
+an Android demonstration.
+
+## Running render tests
+
+Use the [shared runner instructions](../../render-tests/README.md). To run only
+this plugin after building the Metal runner:
+
+```sh
+./bazel-bin/render_tests_metal \
+  --manifestPath plugins/ngon-layer/render-tests/manifest.json --recycle-map
+```

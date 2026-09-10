@@ -5,9 +5,9 @@ mln_add_plugin_render_tests(
     SOURCES
         "${CMAKE_CURRENT_LIST_DIR}/register.cpp"
         "${plugin_root}/shared/cpp/gltf_layer.cpp"
-        "${PROJECT_SOURCE_DIR}/vendor/tinygltf/tiny_gltf.cc"
+        "${CMAKE_CURRENT_LIST_DIR}/../vendor/tinygltf/tiny_gltf.cc"
     INCLUDE_DIRECTORIES
         "${plugin_root}/shared/include"
-        "${PROJECT_SOURCE_DIR}/vendor/tinygltf"
+        "${CMAKE_CURRENT_LIST_DIR}/../vendor/tinygltf"
     COMPILE_DEFINITIONS MLN_GLTF_PLUGIN_VERSION="ci"
 )

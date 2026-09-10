@@ -101,3 +101,9 @@ apple_static_xcframework(
     visibility = ["//visibility:public"],
     deps = [":RectangleLayer"],
 )
+
+filegroup(
+    name = "example_assets",
+    srcs = glob(["examples/android/assets/*.json"]),
+    visibility = ["//visibility:public"],
+)

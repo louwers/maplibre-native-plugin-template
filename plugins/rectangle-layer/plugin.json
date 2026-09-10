@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "android": {
+    "registrationClass": "org.maplibre.plugins.rectangle.RectangleLayerPlugin"
+  },
+  "apple": {
+    "product": "RectangleLayer",
+    "targets": "swift-targets.swift",
+    "registrationClass": "MLNRectangleLayerPlugin",
+    "header": "RectangleLayer/RectangleLayer.h"
+  },
+  "demo": {
+    "title": "Rectangle layer",
+    "description": "Feature-driven colors, strokes, and smooth zoom interpolation",
+    "androidActivity": "org.maplibre.plugins.demo.RectangleDemoActivity",
+    "ios": {
+      "key": "rectangle",
+      "style": "rectangle-style",
+      "camera": [
+        48.8566,
+        2.3522,
+        20000,
+        0,
+        0
+      ]
+    }
+  }
+}

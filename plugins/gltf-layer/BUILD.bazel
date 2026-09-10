@@ -51,7 +51,7 @@ cc_library(
     includes = ["shared/include"],
     visibility = ["//visibility:public"],
     deps = [
-        "//:tinygltf",
+        ":tinygltf",
         "@maplibre//:plugin-api",
     ],
 )
@@ -82,7 +82,7 @@ objc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//:tinygltf",
+        ":tinygltf",
         "@maplibre//:plugin-api",
     ],
 )
@@ -112,4 +112,23 @@ apple_static_xcframework(
     version = ":GltfLayer.version",
     visibility = ["//visibility:public"],
     deps = [":GltfLayer"],
+)
+
+filegroup(
+    name = "example_assets",
+    srcs = glob(["examples/android/assets/*.json"]),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "tinygltf",
+    srcs = ["vendor/tinygltf/tiny_gltf.cc"],
+    hdrs = [
+        "vendor/tinygltf/json.hpp",
+        "vendor/tinygltf/stb_image.h",
+        "vendor/tinygltf/stb_image_write.h",
+        "vendor/tinygltf/tiny_gltf.h",
+    ],
+    includes = ["vendor/tinygltf"],
+    visibility = ["//visibility:public"],
 )

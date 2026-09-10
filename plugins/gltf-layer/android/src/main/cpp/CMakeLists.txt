@@ -8,14 +8,14 @@ find_package(android-plugin-api REQUIRED CONFIG)
 
 add_library(gltf-layer SHARED
     ../../../../shared/cpp/gltf_layer.cpp
-    ../../../../../../vendor/tinygltf/tiny_gltf.cc
+    ../../../../vendor/tinygltf/tiny_gltf.cc
     gltf_layer_jni.cpp
 )
 
 target_compile_features(gltf-layer PRIVATE cxx_std_20)
 target_include_directories(gltf-layer PRIVATE
     ../../../../shared/include
-    ../../../../../../vendor/tinygltf
+    ../../../../vendor/tinygltf
 )
 target_compile_definitions(gltf-layer PRIVATE
     MLN_GLTF_PLUGIN_VERSION="${MLN_GLTF_PLUGIN_VERSION}"

@@ -6,14 +6,4 @@
     <string name="gallery_subtitle">Explore source-bound layers implemented outside MapLibre Native.</string>
     <string name="gallery_footer">Cross-platform plugin examples</string>
     <string name="back_to_gallery">Back to plugin gallery</string>
-    <string name="gltf_title">Eiffel Tower GLTF</string>
-    <string name="gltf_description">Load and render a remote GLB model</string>
-    <string name="rectangles_title">Rectangle layer</string>
-    <string name="rectangles_description">Feature-driven colors, strokes, and smooth zoom interpolation</string>
-    <string name="animate_zoom_in">Animate zoom 10 → 16</string>
-    <string name="animate_zoom_out">Animate zoom 16 → 10</string>
-    <string name="heatmap_title">Heatmap layer</string>
-    <string name="heatmap_description">Two-pass density rendering from GeoJSON points</string>
-    <string name="ngon_title">N-gon layer</string>
-    <string name="ngon_description">Feature-driven polygons, rotation, strokes, and zoom interpolation</string>
 </resources>

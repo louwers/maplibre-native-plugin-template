@@ -1,0 +1,43 @@
+[
+  {
+    "id": "ngon-capitals",
+    "type": "ngon",
+    "minzoom": 2,
+    "paint": {
+      "ngon-corners": ["match", ["to-number", ["get", "capital"], 0], 2, 6, [3, 4], 5, 4],
+      "ngon-rotate": ["match", ["to-number", ["get", "capital"], 0], 2, 30, 0],
+      "ngon-radius": [
+        "interpolate", ["linear"], ["zoom"],
+        2, ["match", ["to-number", ["get", "capital"], 0], 2, 7, [3, 4], 5, 3],
+        5, ["match", ["to-number", ["get", "capital"], 0], 2, 15, [3, 4], 11, 7],
+        9, ["match", ["to-number", ["get", "capital"], 0], 2, 28, [3, 4], 21, 15]
+      ],
+      "ngon-color": ["match", ["to-number", ["get", "capital"], 0], 2, "#e5ac42", [3, 4], "#218b91", "#d8675c"],
+      "ngon-opacity": 0.95,
+      "ngon-stroke-color": ["match", ["to-number", ["get", "capital"], 0], 2, "#735017", [3, 4], "#104e57", "#782e36"],
+      "ngon-stroke-width": ["interpolate", ["linear"], ["zoom"], 2, 1, 9, 2.5],
+      "ngon-pitch-alignment": "viewport",
+      "ngon-pitch-scale": "viewport"
+    }
+  },
+  {
+    "id": "ngon-capital-labels",
+    "type": "symbol",
+    "minzoom": 2,
+    "layout": {
+      "text-field": ["coalesce", ["get", "name:en"], ["get", "name_en"], ["get", "name:latin"], ["get", "name"]],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 2, 10, 6, 13, 10, 16],
+      "text-anchor": "top",
+      "text-offset": [0, 1.4],
+      "text-padding": 4,
+      "text-max-width": 9,
+      "symbol-sort-key": ["to-number", ["get", "capital"], 6]
+    },
+    "paint": {
+      "text-color": "#243747",
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.7
+    }
+  }
+]

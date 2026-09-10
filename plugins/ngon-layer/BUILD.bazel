@@ -103,3 +103,9 @@ apple_static_xcframework(
     visibility = ["//visibility:public"],
     deps = [":NgonLayer"],
 )
+
+filegroup(
+    name = "example_assets",
+    srcs = glob(["examples/android/assets/*.json"]),
+    visibility = ["//visibility:public"],
+)

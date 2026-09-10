@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rectangles_title">Rectangle layer</string>
+    <string name="rectangles_description">Feature-driven colors, strokes, and smooth zoom interpolation</string>
+    <string name="animate_zoom_in">Animate zoom 10 → 16</string>
+    <string name="animate_zoom_out">Animate zoom 16 → 10</string>
+</resources>
