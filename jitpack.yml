@@ -1,0 +1,8 @@
+# Installed by maplibre-native-plugins (`tools/bin/plugin sync`); do not edit.
+# JitPack builds the Android library from a release tag: com.github.<owner>:<repository>:<version>.
+jdk:
+  - openjdk17
+before_install:
+  - git submodule update --init --recursive
+install:
+  - tools/bin/plugin jitpack
