@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "square-layer",
+  "displayName": "Square layer",
+  "description": "Example MapLibre Native plugin that draws a square at every point",
+  "version": "0.1.0",
+  "registerFunction": "mln_square_layer_register",
+  "header": "include/square_layer.h",
+  "sources": ["src/square_layer.cpp"],
+  "includeDirectories": ["include"],
+  "demo": {
+    "style": "examples/square.json"
+  }
+}

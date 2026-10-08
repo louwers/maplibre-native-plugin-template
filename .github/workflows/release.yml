@@ -1,0 +1,64 @@
+# Installed by maplibre-native-plugins (`tools/bin/plugin sync`); do not edit.
+# Releases the version in plugin.json: builds the Android AAR and the iOS XCFramework,
+# then creates a GitHub release and tag named after the version.
+name: Release
+
+run-name: Release ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android AAR
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./tools/actions/android
+        with:
+          output: release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: release-assets/*
+          if-no-files-found: error
+
+  ios:
+    name: iOS XCFramework
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./tools/actions/ios
+        with:
+          output: release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-ios
+          path: release-assets/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    needs: [android, ios]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - uses: ./tools/actions/publish
+        with:
+          assets: release-assets

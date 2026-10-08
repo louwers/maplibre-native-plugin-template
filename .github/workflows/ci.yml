@@ -1,0 +1,76 @@
+# Installed by maplibre-native-plugins (`tools/bin/plugin sync`); do not edit.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Generated files
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Check tool-owned and generated files
+        run: tools/bin/plugin sync --check
+
+  android:
+    name: Android
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./tools/actions/android
+        with:
+          output: build/assets
+
+  ios:
+    name: iOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./tools/actions/ios
+        with:
+          output: build/assets
+          demo-screenshot: build/ios-demo.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-demo-screenshot
+          path: build/ios-demo.png
+          if-no-files-found: ignore
+
+  render-tests:
+    name: Render tests (${{ matrix.backend }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: metal
+            runner: macos-15
+          - backend: opengl
+            runner: ubuntu-24.04
+          - backend: vulkan
+            runner: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./tools/actions/render-tests
+        with:
+          backend: ${{ matrix.backend }}

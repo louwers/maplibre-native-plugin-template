@@ -1,0 +1,25 @@
+# Created by maplibre-native-plugins (`tools/bin/plugin sync`). Add your own entries as needed.
+/build/
+/release-assets/
+
+# Swift Package Manager and Xcode
+/.build/
+/.swiftpm/
+/Package.resolved
+xcuserdata/
+
+# Gradle and Android
+/.gradle/
+/.kotlin/
+/.cxx/
+/local.properties
+*.iml
+.idea/
+
+# Render-test output
+render-tests/cache.db
+render-tests/results/
+render-tests/**/actual.png
+render-tests/**/diff.png
+
+.DS_Store

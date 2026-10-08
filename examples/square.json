@@ -1,0 +1,178 @@
+{
+  "version": 8,
+  "name": "Square layer demo",
+  "center": [
+    0,
+    0
+  ],
+  "zoom": 12,
+  "sources": {
+    "points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#e55e5e",
+              "rank": 0
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.02,
+                0.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#f2a541",
+              "rank": 1
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.01414,
+                0.01414
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#3bb2d0",
+              "rank": 2
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.02
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#3887be",
+              "rank": 3
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                -0.01414,
+                0.01414
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#8a8acb",
+              "rank": 4
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                -0.02,
+                0.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#56b881",
+              "rank": 5
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                -0.01414,
+                -0.01414
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#fbb03b",
+              "rank": 6
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                -0.0,
+                -0.02
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#e8638a",
+              "rank": 7
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.01414,
+                -0.01414
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "color": "#222222",
+              "rank": 8
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                0
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#f4f1ea"
+      }
+    },
+    {
+      "id": "squares",
+      "type": "square",
+      "source": "points",
+      "paint": {
+        "square-color": [
+          "get",
+          "color"
+        ],
+        "square-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          12,
+          14,
+          48
+        ]
+      }
+    }
+  ]
+}
